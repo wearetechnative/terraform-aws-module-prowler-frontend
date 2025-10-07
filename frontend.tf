@@ -1,5 +1,5 @@
 module "prowler_frontend" {
-    source = "${path.module}/frontend"
+    source = "./frontend"
     website_bucket = module.website_bucket.s3_bucket_id
     client_id = module.cognito-user-pool.client_ids
     user_pool_domain = "login.${domain}"
