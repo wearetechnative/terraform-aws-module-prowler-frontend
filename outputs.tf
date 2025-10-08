@@ -27,8 +27,8 @@ output "cognito_user_pool_id" {
   value       = module.cognito-user-pool.id
 }
 
-output "cognito_id_provider_arns" {
-  value = module.cognito-user-pool.outputs.user_group_arns
+output "cognito_id_provider_arn" {
+  value = module.cognito-user-pool.arn
   
 }
 

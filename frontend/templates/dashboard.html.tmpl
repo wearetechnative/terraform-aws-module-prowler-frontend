@@ -11,9 +11,48 @@
       background: linear-gradient(135deg, #e8ecf7, #f8faff);
       color: #333;
       display: flex;
+      height: 100vh;
+      overflow: hidden;
+    }
+
+    /* Sidebar */
+    .sidebar {
+      width: 220px;
+      background-color: #2c3e50;
+      color: white;
+      display: flex;
+      flex-direction: column;
+      padding-top: 30px;
+      box-shadow: 2px 0 8px rgba(0, 0, 0, 0.1);
+    }
+
+    .sidebar h2 {
+      text-align: center;
+      font-size: 1.3em;
+      margin-bottom: 30px;
+      font-weight: 500;
+      color: #ecf0f1;
+    }
+
+    .sidebar a {
+      padding: 15px 25px;
+      color: white;
+      text-decoration: none;
+      font-weight: 400;
+      transition: background-color 0.3s ease;
+    }
+
+    .sidebar a:hover,
+    .sidebar a.active {
+      background-color: #395797;
+    }
+
+    /* Main content area */
+    .main-content {
+      flex-grow: 1;
+      display: flex;
       align-items: center;
       justify-content: center;
-      height: 100vh;
     }
 
     .card {
@@ -27,9 +66,7 @@
       transition: transform 0.3s ease;
     }
 
-    .card:hover {
-      transform: translateY(-2px);
-    }
+    .card:hover { transform: translateY(-2px); }
 
     h1 {
       font-size: 1.8em;
@@ -82,195 +119,192 @@
       0% { transform: rotate(0deg); }
       100% { transform: rotate(360deg); }
     }
+
+    @media (max-width: 700px) {
+      body {
+        flex-direction: column;
+      }
+      .sidebar {
+        width: 100%;
+        flex-direction: row;
+        justify-content: space-around;
+        box-shadow: none;
+      }
+      .sidebar a {
+        padding: 15px;
+        text-align: center;
+        flex-grow: 1;
+      }
+    }
   </style>
 </head>
 <body>
-  <div class="card">
-    <h1>Prowler Dashboard</h1>
-    <p>Launch and access your interactive Prowler security dashboard.</p>
 
-    <button id="launch-dashboard-button" onclick="handleLaunch()" class="button">Launch Dashboard</button>
+  <!-- Sidebar navigation -->
+  <div class="sidebar">
+    <h2>Prowler</h2>
+    <a href="index.html">Scan Page</a>
+    <a href="dashboard.html" class="active">Dashboard</a>
+  </div>
 
-    <div id="waiting-screen" class="status" style="display:none;">
-      <div class="spinner"></div>
-      <p id="status-text"></p>
+  <!-- Main content -->
+  <div class="main-content">
+    <div class="card">
+      <h1>Prowler Dashboard Launcher</h1>
+      <p>Launch your Prowler dashboard instance for viewing scan results.</p>
+
+      <button id="launch-dashboard-button" onclick="handleLaunch()" class="button">Launch Dashboard</button>
+
+      <div id="waiting-screen" class="status" style="display:none;">
+        <div class="spinner"></div>
+        <p id="status-text"></p>
+      </div>
     </div>
   </div>
 
+  <!-- Your existing JS below -->
   <script>
     const CLIENT_ID = "${client_id}";
     const USER_POOL_DOMAIN = "${user_pool_domain}";
-    const REDIRECT_URI = window.location.origin + window.location.pathname;
     const APIBase = "${api_base}";
-    // Force reload when navigating with back/forward button
-window.addEventListener("pageshow", function (event) {
-  if (event.persisted || performance.getEntriesByType("navigation")[0].type === "back_forward") {
-    window.location.reload();
-  }
-});
+    const REDIRECT_URI = window.location.origin + window.location.pathname;
+    const loginUrlTemplate = `https://$${USER_POOL_DOMAIN}/login?client_id=$${CLIENT_ID}&response_type=token&scope=openid&redirect_uri=$${encodeURIComponent(REDIRECT_URI)}`;
 
-// Handle Cognito redirect
-(function handleRedirect() {
-  const hash = window.location.hash;
-  if (hash.includes('id_token')) {
-    const params = new URLSearchParams(hash.substring(1));
-    const idToken = params.get('id_token');
-    if (idToken) {
-      sessionStorage.setItem('idToken', idToken);
+    window.addEventListener("pageshow", function(event) {
+      if (event.persisted || performance.getEntriesByType("navigation")[0].type === "back_forward") {
+        window.location.reload();
+      }
+    });
+
+    (function handleRedirect() {
+      const hash = window.location.hash;
+      if (hash.includes('id_token')) {
+        const params = new URLSearchParams(hash.substring(1));
+        const idToken = params.get('id_token');
+        if (idToken) sessionStorage.setItem('idToken', idToken);
+        history.replaceState(null, '', window.location.pathname);
+      }
+    })();
+
+    (function ensureAuthenticated() {
+      const token = sessionStorage.getItem('idToken');
+      if (!token) window.location.href = loginUrlTemplate;
+    })();
+
+    function updateStatus(message, showSpinner = true) {
+      document.getElementById('waiting-screen').style.display = 'block';
+      document.getElementById('status-text').innerText = message;
+      document.querySelector(".spinner").style.display = showSpinner ? "inline-block" : "none";
     }
-    history.replaceState(null, '', window.location.pathname);
-  }
-})();
 
-// Ensure user is authenticated
-(function ensureAuthenticated() {
-  const token = sessionStorage.getItem('idToken');
-  if (!token) {
-    const loginUrl = `https://${USER_POOL_DOMAIN}/login?client_id=${CLIENT_ID}&response_type=token&scope=openid&redirect_uri=${encodeURIComponent(REDIRECT_URI)}`;
-    window.location.href = loginUrl;
-  }
-})();
+    function handleLaunch() {
+      document.getElementById('launch-dashboard-button').disabled = true;
+      updateStatus("Checking dashboard...");
 
-// Resume polling if a dashboard instance is already launching
-(function resumeIfDashboardLaunching() {
-  const instanceId = sessionStorage.getItem('dashboardInstanceId');
-  if (instanceId) {
-    console.log("Resuming dashboard launch with instance ID:", instanceId);
-    document.getElementById('launch-dashboard-button').disabled = true;
-    updateStatus("Resuming dashboard launch...");
-    pollDashboardStatus();
-  }
-})();
-
-// Show status messages
-function updateStatus(message, showSpinner = true) {
-  document.getElementById('waiting-screen').style.display = 'block';
-  document.getElementById('status-text').innerText = message;
-  document.querySelector('.spinner').style.display = showSpinner ? 'inline-block' : 'none';
-}
-
-// Called when user clicks launch button
-function handleLaunch() {
-  document.getElementById('launch-dashboard-button').disabled = true;
-  updateStatus("Checking dashboard...");
-
-  fetch(`${APIBase}/check-dashboard-status`, {
-    headers: {
-      'Authorization': 'Bearer ' + sessionStorage.getItem('idToken')
-    }
-  })
-  .then(res => {
-    if (res.status === 409) {
-      // Dashboard is already launching
-      return res.json().then(data => {
-        const instanceId = data.instanceId;
-        if (instanceId) {
-          sessionStorage.setItem('dashboardInstanceId', instanceId);
-          updateStatus("Dashboard is already launching. Monitoring status...");
-          pollDashboardStatus();
-        } else {
-          throw new Error("Instance is launching but no instance ID returned");
+      fetch(`$${APIBase}/check-dashboard-status`, {
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer ' + sessionStorage.getItem('idToken')
         }
+      })
+      .then(res => {
+        if (res.status === 409) {
+          return res.json().then(data => {
+            const instanceId = data.instanceId;
+            if (instanceId) {
+              sessionStorage.setItem('dashboardInstanceId', instanceId);
+              updateStatus("Dashboard is already launching. Monitoring status...");
+              pollDashboardStatus();
+            }
+          });
+        }
+        return res.json();
+      })
+      .then(data => {
+        if (data.status === "ready" && data.dashboardIp) {
+          updateStatus("Dashboard is ready. Redirecting...");
+          window.location.replace(`http://$${data.dashboardIp}:11666`);
+        } else if (["not_found","terminated","stopped"].includes(data.status)) {
+          updateStatus("Dashboard is not running. Starting it...");
+          launchDashboard();
+        } else if (["pending","initializing"].includes(data.status)) {
+          updateStatus("Dashboard is still starting. Monitoring...");
+          sessionStorage.setItem('dashboardInstanceId', data.instanceId);
+          pollDashboardStatus();
+        }
+      })
+      .catch(err => {
+        console.error("Status check failed:", err);
+        updateStatus("Error checking dashboard. Trying to start it...");
+        launchDashboard();
       });
     }
-    return res.json();
-  })
-  .then(data => {
-    if (data.status === "ready" && data.dashboardIp) {
-      updateStatus("Dashboard is ready. Redirecting...");
-      window.location.replace("http://prowler.nbdbiblion.technative.cloud:11666");
-    } else if (["not_found", "terminated", "stopped"].includes(data.status)) {
-      updateStatus("Dashboard is not running. Starting it...");
-      launchDashboard();
-    } else if (data.status === "pending" || data.status === "initializing") {
-      updateStatus("Dashboard is still starting. Monitoring...");
-      sessionStorage.setItem('dashboardInstanceId', data.instanceId);
-      pollDashboardStatus();
-    }
-  })
-  .catch(err => {
-    console.error("Status check failed:", err);
-    updateStatus("Error checking dashboard. Trying to start it...");
-    launchDashboard();
-  });
-}
 
-// Launch new dashboard EC2 instance
-function launchDashboard() {
-  fetch(`${APIBase}/launch-dashboard`, {
-    method: 'POST',
-    headers: {
-      'Authorization': 'Bearer ' + sessionStorage.getItem('idToken')
-    }
-  })
-  .then(res => {
-    if (res.status === 409) {
-      return res.json().then(data => {
-        const instanceId = data.instanceId;
-        if (instanceId) {
-          sessionStorage.setItem('dashboardInstanceId', instanceId);
-          updateStatus("Dashboard already launching. Resuming monitoring...");
-          pollDashboardStatus();
-        } else {
-          throw new Error("Conflict but no instance ID returned");
+    function launchDashboard() {
+      fetch(`$${APIBase}/launch-dashboard`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer ' + sessionStorage.getItem('idToken')
         }
+      })
+      .then(res => res.json())
+      .then(data => {
+        if (!data.instanceId) throw new Error("No instanceId returned.");
+        sessionStorage.setItem('dashboardInstanceId', data.instanceId);
+        pollDashboardStatus();
+      })
+      .catch(err => {
+        console.error("Launch failed:", err);
+        updateStatus("Failed to start dashboard.", false);
+        document.getElementById('launch-dashboard-button').disabled = false;
       });
     }
-    return res.json();
-  })
-  .then(data => {
-    if (!data.instanceId) throw new Error("No instanceId returned.");
-    sessionStorage.setItem('dashboardInstanceId', data.instanceId);
-    pollDashboardStatus();
-  })
-  .catch(err => {
-    console.error("Launch failed:", err);
-    updateStatus("Failed to start dashboard.", false);
-    document.getElementById('launch-dashboard-button').disabled = false;
-  });
-}
 
-// Poll dashboard instance status until it's ready or failed
-function pollDashboardStatus(attempts = 0) {
-  const instanceId = sessionStorage.getItem('dashboardInstanceId');
+    function pollDashboardStatus(attempts = 0) {
+      const instanceId = sessionStorage.getItem('dashboardInstanceId');
+      if (!instanceId || attempts >= 60) {
+        updateStatus("Timeout waiting for dashboard.", false);
+        sessionStorage.removeItem('dashboardInstanceId');
+        document.getElementById('launch-dashboard-button').disabled = false;
+        return;
+      }
 
-  if (!instanceId || attempts >= 60) {
-    updateStatus("Timeout waiting for dashboard.", false);
-    sessionStorage.removeItem('dashboardInstanceId');
-    document.getElementById('launch-dashboard-button').disabled = false;
-    return;
-  }
-
-  fetch(`${APIBase}/check-dashboard-status?instanceId=${encodeURIComponent(instanceId)}`, {
-    method: 'GET',
-    headers: {
-      'Authorization': 'Bearer ' + sessionStorage.getItem('idToken')
+      fetch(`$${APIBase}/check-dashboard-status?instanceId=$${encodeURIComponent(instanceId)}`, {
+        method: 'GET',
+        headers: {
+          'Authorization': 'Bearer ' + sessionStorage.getItem('idToken')
+        }
+      })
+      .then(res => res.json())
+      .then(data => {
+        const currentStatus = data.status || "unknown";
+        updateStatus(`Waiting for dashboard... ($${currentStatus})`);
+        if (currentStatus === "ready" && data.dashboardIp) {
+          updateStatus("Dashboard is ready. Redirecting...");
+          setTimeout(() => window.location.href = `http://$${data.dashboardIp}:11666`, 1000);
+        } else if (["terminated","not_found","stopped"].includes(currentStatus)) {
+          updateStatus("Dashboard is no longer available. Please launch again.", false);
+          sessionStorage.removeItem('dashboardInstanceId');
+          document.getElementById('launch-dashboard-button').disabled = false;
+        } else {
+          setTimeout(() => pollDashboardStatus(attempts + 1), 3000);
+        }
+      })
+      .catch(err => {
+        console.error("Polling error:", err);
+        setTimeout(() => pollDashboardStatus(attempts + 1), 3000);
+      });
     }
-  })
-  .then(res => res.json())
-  .then(data => {
-    const currentStatus = data.status || "unknown";
-    updateStatus(`Waiting for dashboard... (${currentStatus})`);
-    console.log(`Dashboard status poll #${attempts + 1}:`, currentStatus);
 
-    if (currentStatus === "ready" && data.dashboardIp) {
-      updateStatus("Dashboard is ready. Redirecting...");
-      setTimeout(() => {
-        window.location.href = "http://prowler.nbdbiblion.technative.cloud:11666";
-      }, 1000);
-    } else if (["terminated", "not_found", "stopped"].includes(currentStatus)) {
-      updateStatus("Dashboard is no longer available. Please launch again.", false);
-      sessionStorage.removeItem('dashboardInstanceId');
-      document.getElementById('launch-dashboard-button').disabled = false;
-    } else {
-      setTimeout(() => pollDashboardStatus(attempts + 1), 3000);
-    }
-  })
-  .catch(err => {
-    console.error("Polling error:", err);
-    setTimeout(() => pollDashboardStatus(attempts + 1), 3000);
-  });
-}
+    (function resumeIfDashboardLaunching() {
+      const instanceId = sessionStorage.getItem('dashboardInstanceId');
+      if (instanceId) {
+        document.getElementById('launch-dashboard-button').disabled = true;
+        updateStatus("Resuming dashboard launch...");
+        pollDashboardStatus();
+      }
+    })();
   </script>
 </body>
 </html>

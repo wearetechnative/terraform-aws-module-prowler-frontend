@@ -11,9 +11,54 @@
       background: linear-gradient(135deg, #e8ecf7, #f8faff);
       color: #333;
       display: flex;
+      height: 100vh;
+      overflow: hidden;
+    }
+
+    /* Sidebar */
+    .sidebar {
+      width: 220px;
+      background-color: #2c3e50;
+      color: white;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding-top: 40px;
+      box-shadow: 2px 0 8px rgba(0, 0, 0, 0.1);
+    }
+
+    .sidebar h2 {
+      margin-bottom: 40px;
+      font-weight: 600;
+      font-size: 1.4em;
+      color: #ecf0f1;
+    }
+
+    .sidebar a {
+      color: #ccc;
+      text-decoration: none;
+      width: 100%;
+      padding: 14px 30px;
+      text-align: left;
+      font-weight: 500;
+      transition: all 0.25s ease;
+      border-left: 4px solid transparent;
+    }
+
+    .sidebar a:hover,
+    .sidebar a.active {
+      background-color: #395797;
+      color: white;
+      border-left: 4px solid #32cd32;
+    }
+
+    /* Main area */
+    .main {
+      flex-grow: 1;
+      display: flex;
       align-items: center;
       justify-content: center;
-      height: 100vh;
+      padding: 20px;
     }
 
     .card {
@@ -27,9 +72,7 @@
       transition: transform 0.3s ease;
     }
 
-    .card:hover {
-      transform: translateY(-2px);
-    }
+    .card:hover { transform: translateY(-2px); }
 
     h1 {
       font-size: 1.8em;
@@ -92,169 +135,188 @@
     .result-message a:hover {
       text-decoration: underline;
     }
+
+    @media (max-width: 700px) {
+      body {
+        flex-direction: column;
+      }
+
+      .sidebar {
+        width: 100%;
+        flex-direction: row;
+        justify-content: space-around;
+        padding: 10px 0;
+        box-shadow: none;
+      }
+
+      .sidebar a {
+        text-align: center;
+        padding: 10px;
+        border: none;
+      }
+
+      .main {
+        padding-top: 20px;
+      }
+    }
   </style>
 </head>
 <body>
-  <div class="card">
-    <h1>Prowler Security Scan</h1>
-    <p>Run a new AWS security scan and monitor progress in real time.</p>
+  <!-- Sidebar navigation -->
+  <div class="sidebar">
+    <h2>Prowler</h2>
+    <a href="index.html" class="active">Scan</a>
+    <a href="dashboard.html">Dashboard</a>
+  </div>
 
-    <button id="start-task-button" onclick="startTask()" class="button">Start Scan</button>
+  <!-- Main content -->
+  <div class="main">
+    <div class="card">
+      <h1>Prowler Security Scan</h1>
+      <p>Run a new AWS security scan.</p>
 
-    <div id="waiting-screen" class="status" style="display:none;">
-      <div class="spinner"></div>
-      <p id="status-text"></p>
-      <div class="result-message" id="result-message"></div>
+      <button id="start-task-button" onclick="startTask()" class="button">Start Scan</button>
+
+      <div id="waiting-screen" class="status" style="display:none;">
+        <div class="spinner"></div>
+        <p id="status-text"></p>
+        <div class="result-message" id="result-message"></div>
+      </div>
     </div>
   </div>
 
+  <!-- JavaScript (unchanged except Bearer fix) -->
   <script>
     const CLIENT_ID = "${client_id}";
     const USER_POOL_DOMAIN = "${user_pool_domain}";
-    const REDIRECT_URI = window.location.origin + window.location.pathname;
     const APIBase = "${api_base}";
-    // Handle Cognito redirect with id_token
-        (function handleAuthRedirect() {
-        const hash = window.location.hash;
-        if (hash.includes("id_token")) {
-            const params = new URLSearchParams(hash.substring(1));
-            const idToken = params.get("id_token");
-            if (idToken) {
-            sessionStorage.setItem("idToken", idToken);
+    const REDIRECT_URI = window.location.origin + window.location.pathname;
+
+    window.addEventListener("pageshow", function (event) {
+      if (event.persisted || (performance.getEntriesByType("navigation")[0] &&
+        performance.getEntriesByType("navigation")[0].type === "back_forward")) {
+        window.location.reload();
+      }
+    });
+
+    (function handleRedirect() {
+      const hash = window.location.hash;
+      if (hash.includes('id_token')) {
+        const params = new URLSearchParams(hash.substring(1));
+        const idToken = params.get('id_token');
+        if (idToken) sessionStorage.setItem('idToken', idToken);
+        history.replaceState(null, '', window.location.pathname);
+      }
+    })();
+
+    (function ensureAuthenticated() {
+      const token = sessionStorage.getItem('idToken');
+      if (!token) {
+        const loginUrl = `https://$${USER_POOL_DOMAIN}/login?client_id=$${CLIENT_ID}&response_type=token&scope=openid&redirect_uri=$${encodeURIComponent(REDIRECT_URI)}`;
+        window.location.href = loginUrl;
+      }
+    })();
+
+    function updateStatus(message, showSpinner = true) {
+      document.getElementById('waiting-screen').style.display = 'block';
+      document.getElementById('status-text').innerText = message;
+      document.querySelector('.spinner').style.display = showSpinner ? 'inline-block' : 'none';
+    }
+
+    function startTask() {
+      const button = document.getElementById('start-task-button');
+      button.disabled = true;
+      updateStatus("Starting scan...");
+
+      fetch(`$${APIBase}/start-task`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer ' + sessionStorage.getItem('idToken')
+        },
+        body: JSON.stringify({})
+      })
+      .then(res => {
+        if (res.status === 409) {
+          return res.json().then(data => {
+            if (data.taskArns) {
+              sessionStorage.setItem('taskArns', JSON.stringify(data.taskArns));
+              updateStatus("A scan is already running. Checking status...");
+              pollTaskStatus(data.taskArns);
+              return Promise.resolve();
+            } else {
+              throw new Error("A scan is already running, but task status could not be retrieved.");
             }
-            history.replaceState(null, "", window.location.pathname);
+          });
         }
-        })();
-
-        // Redirect to Cognito login if not authenticated
-        (function ensureAuthenticated() {
-        const token = sessionStorage.getItem("idToken");
-        if (!token) {
-            const loginUrl = `https://${USER_POOL_DOMAIN}/login?client_id=${CLIENT_ID}&response_type=token&scope=openid&redirect_uri=${encodeURIComponent(REDIRECT_URI)}`;
-            window.location.href = loginUrl;
+        if (!res.ok) throw new Error("Unauthorized or error starting task");
+        return res.json();
+      })
+      .then(data => {
+        if (data && data.taskArns && data.taskArns.length > 0) {
+          sessionStorage.setItem('taskArns', JSON.stringify(data.taskArns));
+          updateStatus("Scan in progress...");
+          pollTaskStatus(data.taskArns);
         }
-        })();
+      })
+      .catch(error => {
+        console.error("Error starting task:", error);
+        alert("Failed to start the task: " + error.message);
+        updateStatus("Error: " + error.message, false);
+        button.disabled = false;
+      });
+    }
 
-        // Update waiting screen
-        function updateStatus(message, showSpinner = true) {
-        document.getElementById("waiting-screen").style.display = "block";
-        document.getElementById("status-text").innerText = message;
-        document.querySelector(".spinner").style.display = showSpinner ? "inline-block" : "none";
+    (function resumePollingIfNeeded() {
+      const stored = sessionStorage.getItem('taskArns');
+      if (stored) {
+        try {
+          const taskArns = JSON.parse(stored);
+          if (Array.isArray(taskArns) && taskArns.length > 0) {
+            updateStatus("Resuming scan status polling...");
+            document.getElementById('start-task-button').disabled = true;
+            pollTaskStatus(taskArns);
+          }
+        } catch (err) {
+          console.error("Error resuming scan:", err);
+          sessionStorage.removeItem('taskArns');
         }
+      }
+    })();
 
-        // Start ECS task via API
-        function startTask() {
-        const button = document.getElementById("start-task-button");
-        button.disabled = true;
-        updateStatus("Starting scan...");
-
-        fetch(`${APIBase}/start-task`, {
-            method: "POST",
-            headers: {
-            "Content-Type": "application/json",
-            "Authorization": "Bearer " + sessionStorage.getItem("idToken")
-            },
-            body: JSON.stringify({})
+    function pollTaskStatus(taskArns) {
+      const encodedArns = encodeURIComponent(JSON.stringify(taskArns));
+      const intervalId = setInterval(() => {
+        fetch(`$${APIBase}/check-task-status?taskArn=$${encodedArns}`, {
+          headers: {
+            'Authorization': 'Bearer ' + sessionStorage.getItem('idToken')
+          }
         })
-        .then(response => {
-            if (response.status === 409) {
-            // Properly parse the JSON body before accessing taskArns
-            return response.json().then(data => {
-                if (data.taskArns) {
-                const arns = data.taskArns;
-                sessionStorage.setItem("taskArns", JSON.stringify(arns));
-                updateStatus("A scan is already running. Checking status...");
-                pollTaskStatus(arns);
-                // Return a resolved promise to skip the next then()
-                return Promise.resolve();
-                } else {
-                throw new Error("A scan is already running, but task status could not be retrieved.");
-                }
-            });
-            }
-
-            if (!response.ok) {
-            throw new Error("Unauthorized or error starting task");
-            }
-
-            return response.json();
+        .then(r => {
+          if (!r.ok) throw new Error("Polling failed");
+          return r.json();
         })
-        .then(data => {
-            // This block is skipped if previous then() returned Promise.resolve()
-            if (data) {
-            if (!data.taskArns || data.taskArns.length === 0) {
-                throw new Error("No taskArns returned.");
-            }
-            sessionStorage.setItem("taskArns", JSON.stringify(data.taskArns));
-            updateStatus("Scan in progress...");
-            pollTaskStatus(data.taskArns);
-            }
+        .then(d => {
+          const status = d.status || "unknown";
+          updateStatus(`Scan status: $${status}...`);
+          if (status === "STOPPED") {
+            clearInterval(intervalId);
+            sessionStorage.removeItem('taskArns');
+            updateStatus("Scan complete", false);
+            document.getElementById('start-task-button').disabled = false;
+            document.getElementById('result-message').innerHTML = `
+              <p>Scan is completed! You can now view the results by launching the Prowler dashboard.</p>
+              <a href="dashboard.html" style="text-decoration: underline; color: #32cd32;">
+                Go to Launch Dashboard Page
+              </a>`;
+          }
         })
-        .catch(error => {
-            console.error("Error starting task:", error);
-            alert("Failed to start the task.");
-            updateStatus("Error: " + error.message, false);
-            button.disabled = false;
+        .catch(e => {
+          console.error("Polling error:", e);
+          updateStatus("Error checking scan status...", false);
         });
-        }
-
-        // Poll ECS task status every 5 seconds
-        function pollTaskStatus(taskArns) {
-        const encodedArns = encodeURIComponent(JSON.stringify(taskArns));
-        const intervalId = setInterval(() => {
-            fetch(`${APIBase}/check-task-status?taskArn=${encodedArns}`, {
-            headers: {
-                "Authorization": "Bearer " + sessionStorage.getItem("idToken")
-            }
-            })
-            .then(res => {
-            if (!res.ok) throw new Error("Polling failed");
-            return res.json();
-            })
-            .then(data => {
-            const status = data.status || "unknown";
-            console.log("Polling status:", data);
-            updateStatus(`Scan status: ${status}...`);
-
-            if (status === "STOPPED") {
-                clearInterval(intervalId);
-                sessionStorage.removeItem("taskArns");
-                updateStatus("Scan complete", false);
-                document.getElementById("start-task-button").disabled = false;
-
-                const result = document.getElementById("result-message");
-                result.innerHTML = `
-                <p>Scan is completed! You can now view the results by launching the Prowler dashboard.</p>
-                <a href="/Prowler/prowler_dashboard/" style="text-decoration: underline; color: #32cd32;">
-                    Go to Launch Dashboard Page
-                </a>
-                `;
-            }
-            })
-            .catch(err => {
-            console.error("Polling error:", err);
-            updateStatus("Error checking scan status...", false);
-            });
-        }, 5000);
-        }
-
-        // Resume polling if taskArns are in sessionStorage
-        (function resumePollingIfNeeded() {
-        const stored = sessionStorage.getItem("taskArns");
-        if (stored) {
-            try {
-            const taskArns = JSON.parse(stored);
-            if (Array.isArray(taskArns) && taskArns.length > 0) {
-                updateStatus("Resuming scan status polling...");
-                document.getElementById("start-task-button").disabled = true;
-                pollTaskStatus(taskArns);
-            }
-            } catch (err) {
-            console.error("Error resuming scan:", err);
-            sessionStorage.removeItem("taskArns");
-            }
-        }
-        })();
+      }, 5000);
+    }
   </script>
 </body>
 </html>
