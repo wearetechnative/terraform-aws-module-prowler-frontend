@@ -1,14 +1,14 @@
 locals {
   scan_html = templatefile("${path.module}/templates/scan.html.tmpl", {
-    CLIENT_ID        = var.client_id
-    USER_POOL_DOMAIN = var.user_pool_domain
-    APIBase         = var.api_base
+    client_id        = var.client_id
+    user_pool_domain = var.user_pool_domain
+    api_base         = var.api_base
   })
 
   dashboard_html = templatefile("${path.module}/templates/dashboard.html.tmpl", {
-    CLIENT_ID        = var.client_id
-    USER_POOL_DOMAIN = var.user_pool_domain
-    APIBase         = var.api_base
+    client_id        = var.client_id
+    user_pool_domain = var.user_pool_domain
+    api_base         = var.api_base
   })
 }
 
