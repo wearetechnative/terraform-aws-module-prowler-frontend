@@ -37,6 +37,16 @@ module "cloudfront" {
       }
     }
 
+    dashboard = {
+      domain_name = "dashboard.${var.domain}"
+      custom_origin_config = {
+        http_port              = 80
+        https_port             = 443
+        origin_protocol_policy = "https-only"
+        origin_ssl_protocols   = ["TLSv1.2"]
+      }
+    }
+    
     dummy = {
       domain_name = "example.com"
       custom_origin_config = {
@@ -123,7 +133,18 @@ module "cloudfront" {
         }
       }
     },
-
+    {
+      path_pattern     = "dashboard/*"
+      target_origin_id = "dashboard"
+      viewer_protocol_policy = "redirect-to-https"
+      allowed_methods  = ["GET","HEAD","OPTIONS"]
+      cached_methods   = ["GET","HEAD"]
+      lambda_function_association = {
+        viewer-request = {
+          lambda_arn = module.lambda_function["check-auth"].lambda_function_qualified_arn
+        }
+      }
+    }
   ]
 
   viewer_certificate = {

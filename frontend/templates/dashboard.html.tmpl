@@ -220,9 +220,9 @@
         return res.json();
       })
       .then(data => {
-        if (data.status === "ready" && data.dashboardIp) {
+        if (data.status === "ready" && data.dashboardUrl) {
           updateStatus("Dashboard is ready. Redirecting...");
-          window.location.replace(`http://$${data.dashboardIp}:11666`);
+          window.location.replace(data.dashboardUrl);
         } else if (["not_found","terminated","stopped"].includes(data.status)) {
           updateStatus("Dashboard is not running. Starting it...");
           launchDashboard();
@@ -249,8 +249,9 @@
       })
       .then(res => res.json())
       .then(data => {
-        if (!data.instanceId) throw new Error("No instanceId returned.");
-        sessionStorage.setItem('dashboardInstanceId', data.instanceId);
+        if (!data.dashboardUrl) throw new Error("No dashboardUrl returned.");
+        sessionStorage.setItem('dashboardUrl', data.dashboardUrl);
+        if (data.instanceId) sessionStorage.setItem('dashboardInstanceId', data.instanceId); // optional, for polling
         pollDashboardStatus();
       })
       .catch(err => {
@@ -279,9 +280,9 @@
       .then(data => {
         const currentStatus = data.status || "unknown";
         updateStatus(`Waiting for dashboard... ($${currentStatus})`);
-        if (currentStatus === "ready" && data.dashboardIp) {
-          updateStatus("Dashboard is ready. Redirecting...");
-          setTimeout(() => window.location.href = `http://$${data.dashboardIp}:11666`, 1000);
+        if (currentStatus === "ready" && data.dashboardUrl) {
+            updateStatus("Dashboard is ready. Redirecting...");
+            setTimeout(() => {window.location.href = data.dashboardUrl;}, 1000);
         } else if (["terminated","not_found","stopped"].includes(currentStatus)) {
           updateStatus("Dashboard is no longer available. Please launch again.", false);
           sessionStorage.removeItem('dashboardInstanceId');
