@@ -54,7 +54,7 @@ resource "aws_security_group" "alb_sg" {
     from_port   = 80
     to_port     = 80
     protocol    = "tcp"
-    cidr_blocks = ["0.0.0.0/0"] # or CloudFront prefix list for better security
+    prefix_list_ids   = ["pl-a3a144ca"] # or CloudFront prefix list for better security
   }
 
   egress {
@@ -147,7 +147,8 @@ resource "aws_security_group_rule" "dashboard_cloudfront" {
   to_port           = 80
   protocol          = "tcp"
   security_group_id = aws_security_group.dashboard_sg.id
-  prefix_list_ids   = ["pl-a3a144ca"]
+  prefix_list_ids   = [data.aws_prefix_list.cloudfront.id]
+  # prefix_list_ids   = ["pl-a3a144ca"]
 }
 
 data "aws_iam_policy_document" "update_trust_relationship" {

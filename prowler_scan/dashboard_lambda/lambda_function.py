@@ -1,8 +1,14 @@
 import boto3
 from datetime import datetime, timezone, timedelta
 import re
+import time
+import os
 
 ec2 = boto3.resource('ec2')
+elbv2 = boto3.client('elbv2')
+
+TARGET_GROUP_ARN = os.environ.get("TARGET_GROUP_ARN")  # Pass in via Lambda env var
+DRAINING_WAIT_SECONDS = 60  # how long to wait before terminating
 
 def parse_duration(value):
     match = re.fullmatch(r"(\d+)([mhds])", value)
@@ -10,15 +16,12 @@ def parse_duration(value):
         return None
     num, unit = match.groups()
     num = int(num)
-    if unit == "m":
-        return timedelta(minutes=num)
-    elif unit == "h":
-        return timedelta(hours=num)
-    elif unit == "d":
-        return timedelta(days=num)
-    elif unit == "s":
-        return timedelta(seconds=num)
-    return None
+    return {
+        "m": timedelta(minutes=num),
+        "h": timedelta(hours=num),
+        "d": timedelta(days=num),
+        "s": timedelta(seconds=num)
+    }.get(unit)
 
 def lambda_handler(event, context):
     now = datetime.now(timezone.utc)
@@ -42,5 +45,20 @@ def lambda_handler(event, context):
 
         age = now - launch_time
         if age >= duration:
-            print(f"Terminating {instance.id}, age {age}, threshold {duration}")
-            instance.terminate()
+            print(f"Draining instance {instance.id}, age {age}, threshold {duration}")
+            try:
+                # Deregister instance from target group
+                elbv2.deregister_targets(
+                    TargetGroupArn=TARGET_GROUP_ARN,
+                    Targets=[{"Id": instance.id, "Port": 11666}]
+                )
+                print(f"Instance {instance.id} deregistered from target group")
+
+                # Wait a bit to allow connections to drain
+                time.sleep(DRAINING_WAIT_SECONDS)
+
+                # Terminate instance
+                print(f"Terminating instance {instance.id}")
+                instance.terminate()
+            except Exception as e:
+                print(f"Error terminating {instance.id}: {e}")

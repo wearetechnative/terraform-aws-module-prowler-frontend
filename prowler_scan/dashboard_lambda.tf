@@ -17,7 +17,7 @@ module "lambda_terminate_dashboard" {
   source_file_name          = null
 
   environment_variables = {
-
+    TARGET_GROUP_ARN = aws_lb_target_group.dashboard.arn
   }
 
   sqs_dlq_arn = var.dlq_arn

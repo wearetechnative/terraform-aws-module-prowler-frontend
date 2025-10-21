@@ -45,6 +45,10 @@ module "cloudfront" {
         origin_protocol_policy = "https-only"
         origin_ssl_protocols   = ["TLSv1.2"]
       }
+      origin_custom_header {
+        name  = "X-CloudFront-Secret"
+        value = var.cloudfront_secret
+      }
     }
     
     dummy = {

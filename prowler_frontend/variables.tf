@@ -100,3 +100,8 @@ variable "api_gateway_stage_invoke_url" {
   description = "Invoke Url of the deployed api gateway stage"
   type = string
 }
+
+variable "cloudfront_secret" {
+  type        = string
+  description = "Shared secret between CloudFront and ALB"
+}
