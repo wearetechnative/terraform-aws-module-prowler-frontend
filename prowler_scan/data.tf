@@ -1,10 +1,5 @@
-provider "aws" {
-  alias  = "cloudfront"
-  region = "us-east-1"
-}
 
 data "aws_prefix_list" "cloudfront" {
-  provider = aws.cloudfront
   name     = "com.amazonaws.global.cloudfront.origin-facing"
 }
 

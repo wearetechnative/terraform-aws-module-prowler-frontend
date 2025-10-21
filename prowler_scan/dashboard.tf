@@ -82,8 +82,7 @@ resource "aws_security_group_rule" "dashboard_cloudfront" {
   to_port           = 80
   protocol          = "tcp"
   security_group_id = aws_security_group.dashboard_sg.id
-  prefix_list_ids   = [data.aws_prefix_list.cloudfront.id]
-  # prefix_list_ids   = ["pl-a3a144ca"]
+  prefix_list_ids   = [var.prefix_list_id]
 }
 
 data "aws_iam_policy_document" "update_trust_relationship" {

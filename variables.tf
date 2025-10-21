@@ -109,3 +109,8 @@ variable "mutelist" {
   type        = string
   default     = "Mutelist: []"
 }
+
+variable "prefix_list_id" {
+  type        = string
+  description = "Managed prefix lists for com.amazonaws.global.cloudfront.origin-facing, workaround: datablock does not work"
+}

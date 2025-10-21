@@ -112,3 +112,8 @@ variable "cloudfront_secret" {
   type        = string
   description = "Shared secret between CloudFront and ALB"
 }
+
+variable "prefix_list_id" {
+  type        = string
+  description = "Managed prefix lists for com.amazonaws.global.cloudfront.origin-facing, workaround: datablock does not work"
+}

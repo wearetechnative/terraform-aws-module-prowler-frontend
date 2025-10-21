@@ -32,7 +32,7 @@ resource "aws_security_group" "alb_sg" {
     from_port   = 80
     to_port     = 80
     protocol    = "tcp"
-    prefix_list_ids   = ["pl-a3a144ca"] # or CloudFront prefix list for better security
+    prefix_list_ids   = [var.prefix_list_id] # or CloudFront prefix list for better security
   }
 
   egress {
