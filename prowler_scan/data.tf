@@ -1,8 +1,3 @@
-
-data "aws_prefix_list" "cloudfront" {
-  name     = "com.amazonaws.global.cloudfront.origin-facing"
-}
-
 data "aws_subnets" "public" {                                                                                                                                                                                                              
   filter {                                                                                                                                                                                                                                 
     name   = "vpc-id"                                                                                                                                                                                                                      

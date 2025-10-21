@@ -69,7 +69,7 @@ resource "aws_security_group_rule" "allow_cloudfront_to_alb" {
   to_port           = 443
   protocol          = "tcp"
   security_group_id = aws_security_group.alb_sg.id
-  prefix_list_ids   = [data.aws_prefix_list.cloudfront.id]
+  prefix_list_ids   = [var.prefix_list_id]
 }
 
 resource "aws_lb_listener_rule" "allow_cloudfront_header" {
