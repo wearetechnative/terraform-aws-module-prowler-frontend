@@ -20,18 +20,6 @@ data "aws_route53_zone" "this" {
   name = var.domain
 }
 
-resource "aws_route53_record" "dashboard" {
-  zone_id = data.aws_route53_zone.this.zone_id
-  name    = "dashboard.${var.domain}"
-  type    = "A"
-
-  alias {
-    name                   = aws_lb.dashboard.dns_name
-    zone_id                = aws_lb.dashboard.zone_id
-    evaluate_target_health = true
-  }
-}
-
 module "key_pair" {
   source             = "terraform-aws-modules/key-pair/aws"
   version            = "2.0.2"
