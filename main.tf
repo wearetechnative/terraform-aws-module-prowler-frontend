@@ -1,6 +1,6 @@
 module "prowler_launch_website" {
 
-  source                         = "${path.module}/prowler_frontend"
+  source                         = "./prowler_frontend"
   name                           = var.prowlersite_name
   domain                         = "${var.prowlersite_name}.${var.prowlersite_domain}"
   route53_zone_name              = var.prowlersite_domain
@@ -29,9 +29,9 @@ resource "random_password" "cloudfront_secret" {
 }
 
 module "prowler_scan" {
-  source                       = "${path.module}/prowler_scan"
+  source                       = "./prowler_scan"
   region                       = var.region
-  domain                       = var.docsite_domain
+  domain                       = var.prowlersite_domain
   prowler_scans                = var.prowler_scans
   ecs_cluster_name             = var.ecs_cluster_name
   prowler_container_subnet     = var.prowler_container_subnet
@@ -48,7 +48,7 @@ module "prowler_scan" {
   kms_key_arn                  = data.terraform_remote_state.kms.outputs.default_kms_key_arn
   dlq_arn                      = data.terraform_remote_state.dlq.outputs.dlq_arn
   cognito_id_provider_arns     = var.cognito_id_provider_arns
-  mutelist                     = file("./prowler_mutelist.yaml")
+  mutelist                     = var.mutelist
   cloudfront_secret            = var.cloudfront_secret
   depends_on = [aws_route53_zone.prowlersite]
 }
