@@ -44,7 +44,7 @@ resource "aws_security_group" "alb_sg" {
 }
 
 resource "aws_security_group_rule" "inbound_443" {
-  description       = "Allow ssh traffic."
+  description       = "Allow 443 traffic."
   type              = "ingress"
   from_port         = 443
   to_port           = 443
