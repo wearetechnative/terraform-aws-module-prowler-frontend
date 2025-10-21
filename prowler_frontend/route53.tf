@@ -33,7 +33,7 @@ data "aws_route53_zone" "dashboard" {
 }
 
 resource "aws_route53_record" "dashboard" {
-  zone_id = data.aws_route53_zone.dsahboard.zone_id
+  zone_id = data.aws_route53_zone.dashboard.zone_id
   name    = "dashboard.prowler.${var.domain}"
   type    = "A"
 
