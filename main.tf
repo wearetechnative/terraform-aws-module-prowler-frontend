@@ -49,7 +49,6 @@ module "prowler_scan" {
   dlq_arn                      = var.dlq_arn
   cognito_id_provider_arns     = [module.prowler_launch_website.cognito_id_provider_arn]
   mutelist                     = var.mutelist
-  cloudfront_secret            = local.cloudfront_secret
-  prefix_list_id               = var.prefix_list_id 
+  cloudfront_secret            = local.cloudfront_secret 
   depends_on = [aws_route53_zone.prowlersite]
 }
