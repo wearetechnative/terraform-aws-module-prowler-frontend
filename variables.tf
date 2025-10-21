@@ -7,7 +7,7 @@ variable "prowlersite_name" {
 variable "prowlersite_domain" {
   type        = string
   description = "Domain for the frontend module"
-  default = "jeroen.technative.cloud"
+  # default = "jeroen.technative.cloud"
 }
 
 variable "region" {
@@ -86,11 +86,6 @@ variable "kms_key_arn" {
 variable "dlq_arn" {
   type        = string
   description = "ARN for DLQ for lambda"
-}
-
-variable "cognito_id_provider_arns" {
-  description = "List of arns of cognito identity providers you want to allow to run prowler scans"
-  type        = list(any)
 }
 
 variable "domain" {
