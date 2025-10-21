@@ -16,10 +16,6 @@ resource "aws_launch_template" "compute" {
   }))
 }
 
-data "aws_route53_zone" "this" {
-  name = var.domain
-}
-
 module "key_pair" {
   source             = "terraform-aws-modules/key-pair/aws"
   version            = "2.0.2"
