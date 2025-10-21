@@ -29,8 +29,8 @@ resource "aws_security_group" "alb_sg" {
   vpc_id = var.vpc_id
 
   ingress {
-    from_port   = 443
-    to_port     = 443
+    from_port   = 80
+    to_port     = 80
     protocol    = "tcp"
     cidr_blocks = ["0.0.0.0/0"]
   }
@@ -41,6 +41,16 @@ resource "aws_security_group" "alb_sg" {
     protocol    = "-1"
     cidr_blocks = ["0.0.0.0/0"]
   }
+}
+
+resource "aws_security_group_rule" "inbound_443" {
+  description       = "Allow ssh traffic."
+  type              = "ingress"
+  from_port         = 443
+  to_port           = 443
+  protocol          = "tcp"
+  security_group_id = aws_security_group.alb_sg.id
+  cidr_blocks       = ["0.0.0.0/0"]
 }
 
 resource "aws_lb_listener" "dashboard_http" {

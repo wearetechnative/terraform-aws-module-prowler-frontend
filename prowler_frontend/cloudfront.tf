@@ -49,10 +49,6 @@ module "cloudfront" {
         {
           name  = "X-CloudFront-Secret"
           value = var.cloudfront_secret
-        },
-        {
-          name  = "Host"
-          value = var.alb_dns
         }
       ]
     }
