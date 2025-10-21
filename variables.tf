@@ -119,9 +119,3 @@ variable "dashboard_frontend_url" {
   description = "Frontend page to launch dashboard from"
   type = string
 }
-
-variable "cloudfront_secret" {
-  type        = string
-  description = "Shared secret between CloudFront and ALB"
-  default     = random_password.cloudfront_secret.result
-}

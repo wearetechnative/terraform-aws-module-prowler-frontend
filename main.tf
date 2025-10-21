@@ -16,7 +16,7 @@ module "prowler_launch_website" {
     "https://dashboard.prowler.${var.prowlersite_domain}"
   ]
   api_gateway_stage_invoke_url = module.prowler_scan.api_gateway_stage_invoke_url
-  cloudfront_secret            = var.cloudfront_secret
+  cloudfront_secret            = local.cloudfront_secret
   providers = {
     aws.us-east-1 : aws.us-east-1
   }
@@ -49,6 +49,6 @@ module "prowler_scan" {
   dlq_arn                      = data.terraform_remote_state.dlq.outputs.dlq_arn
   cognito_id_provider_arns     = var.cognito_id_provider_arns
   mutelist                     = var.mutelist
-  cloudfront_secret            = var.cloudfront_secret
+  cloudfront_secret            = local.cloudfront_secret
   depends_on = [aws_route53_zone.prowlersite]
 }
