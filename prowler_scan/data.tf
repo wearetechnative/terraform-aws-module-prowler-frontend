@@ -1,5 +1,11 @@
+provider "aws" {
+  alias  = "cloudfront"
+  region = "us-east-1"
+}
+
 data "aws_prefix_list" "cloudfront" {
-  name = "com.amazonaws.global.cloudfront.origin-facing"
+  provider = aws.cloudfront
+  name     = "com.amazonaws.global.cloudfront.origin-facing"
 }
 
 data "aws_subnets" "public" {                                                                                                                                                                                                              
