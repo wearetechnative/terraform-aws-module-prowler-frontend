@@ -17,6 +17,7 @@ module "prowler_launch_website" {
   ]
   api_gateway_stage_invoke_url = module.prowler_scan.api_gateway_stage_invoke_url
   cloudfront_secret            = local.cloudfront_secret
+  alb_dns                      = module.prowler_scan.alb_dns
   providers = {
     aws.us-east-1 : aws.us-east-1
   }

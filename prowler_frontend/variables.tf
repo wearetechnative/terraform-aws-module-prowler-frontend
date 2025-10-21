@@ -105,3 +105,8 @@ variable "cloudfront_secret" {
   type        = string
   description = "Shared secret between CloudFront and ALB"
 }
+
+variable "alb_dns" {
+  type        = string
+  description = "dns name of alb"
+}

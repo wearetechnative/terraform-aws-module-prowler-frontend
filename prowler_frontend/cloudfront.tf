@@ -42,13 +42,19 @@ module "cloudfront" {
       custom_origin_config = {
         http_port              = 80
         https_port             = 443
-        origin_protocol_policy = "http-only"
+        origin_protocol_policy = "http-only" # or https-only if ALB has cert
         origin_ssl_protocols   = ["TLSv1.2"]
       }
-      origin_custom_header = {
-        name  = "X-CloudFront-Secret"
-        value = var.cloudfront_secret
-      }
+      origin_custom_header = [
+        {
+          name  = "X-CloudFront-Secret"
+          value = var.cloudfront_secret
+        },
+        {
+          name  = "Host"
+          value = var.alb_dns
+        }
+      ]
     }
     
     dummy = {
