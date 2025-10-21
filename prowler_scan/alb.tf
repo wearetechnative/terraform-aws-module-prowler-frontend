@@ -29,10 +29,10 @@ resource "aws_security_group" "alb_sg" {
   vpc_id = var.vpc_id
 
   ingress {
-    from_port   = 80
-    to_port     = 80
+    from_port   = 443
+    to_port     = 443
     protocol    = "tcp"
-    prefix_list_ids   = [var.prefix_list_id] # or CloudFront prefix list for better security
+    cidr_blocks = ["0.0.0.0/0"]
   }
 
   egress {
@@ -69,7 +69,7 @@ resource "aws_security_group_rule" "allow_cloudfront_to_alb" {
   to_port           = 443
   protocol          = "tcp"
   security_group_id = aws_security_group.alb_sg.id
-  prefix_list_ids   = [var.prefix_list_id]
+  cidr_blocks = ["0.0.0.0/0"]
 }
 
 resource "aws_lb_listener_rule" "allow_cloudfront_header" {
