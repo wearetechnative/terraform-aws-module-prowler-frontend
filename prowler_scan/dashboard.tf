@@ -1,3 +1,25 @@
+resource "aws_launch_template" "compute" {
+  name          = "prowler_dashboard"
+  key_name      = module.key_pair.key_pair_name
+  image_id      = var.prowler_ami
+  instance_type = "t3.small"
+  iam_instance_profile {
+    name = aws_iam_instance_profile.ec2_profile.name
+  }
+  network_interfaces {
+    associate_public_ip_address = true
+    subnet_id                   = var.prowler_dashboard_subnet
+    security_groups             = [aws_security_group.dashboard_sg.id]
+  }
+  user_data = base64encode(templatefile("${path.module}/user_data.tftpl", {
+    bucket_name = var.prowler_report_bucket_name
+  }))
+}
+
+data "aws_route53_zone" "this" {
+  name = var.domain
+}
+
 resource "aws_route53_record" "dashboard" {
   zone_id = data.aws_route53_zone.this.zone_id
   name    = "dashboard.${var.domain}"

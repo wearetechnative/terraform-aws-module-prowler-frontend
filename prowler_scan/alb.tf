@@ -73,7 +73,7 @@ resource "aws_security_group_rule" "allow_cloudfront_to_alb" {
 }
 
 resource "aws_lb_listener_rule" "allow_cloudfront_header" {
-  listener_arn = aws_lb_listener.http.arn
+  listener_arn = aws_lb_listener.dashboard_http.arn
   priority     = 1
 
   action {

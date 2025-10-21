@@ -42,12 +42,12 @@ module "prowler_scan" {
   container_name               = var.container_name
   allowed_ips                  = var.allowed_ips
   dashboard_uptime             = var.dashboard_uptime
-  dashboard_frontend_url       = var.dashboard_frontend_url
+  dashboard_frontend_url       = module.prowler_launch_website.url
   report_retention             = var.report_retention
   prowler_ami                  = var.prowler_ami
-  kms_key_arn                  = data.terraform_remote_state.kms.outputs.default_kms_key_arn
-  dlq_arn                      = data.terraform_remote_state.dlq.outputs.dlq_arn
-  cognito_id_provider_arns     = var.cognito_id_provider_arns
+  kms_key_arn                  = var.kms_key_arn
+  dlq_arn                      = var.dlq_arn
+  cognito_id_provider_arns     = [module.prowler_launch_website.cognito_id_provider_arn]
   mutelist                     = var.mutelist
   cloudfront_secret            = local.cloudfront_secret
   depends_on = [aws_route53_zone.prowlersite]
