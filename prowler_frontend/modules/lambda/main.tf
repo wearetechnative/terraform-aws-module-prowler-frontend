@@ -13,9 +13,8 @@ terraform {
 }
 
 locals {
-  path = "${path.module}/../../external/cloudfront-authorization-at-edge/${var.function}"
-  path_function = "${local.path}/bundle.js"
-  path_configuration = "${local.path}/configuration.json"
+  base_path         = "${path.module}/../../external/cloudfront-authorization-at-edge/${var.function}"
+  path_configuration = "${local.base_path}/configuration.json"
 }
 
 resource "local_file" "function_configuration" {
@@ -25,8 +24,8 @@ resource "local_file" "function_configuration" {
 
 data "archive_file" "archive" {
   type        = "zip"
-  source_dir  = local.path
-  output_path = "${local.path}-v1.zip"
+  source_dir  = local.base_path
+  output_path = "${local.base_path}-v1.zip"
   output_file_mode = "0666"
 
   depends_on = [
@@ -46,12 +45,11 @@ module "lambda_function" {
   lambda_at_edge = true
 
   create_package         = false
-  local_existing_package = "${local.path}-v1.zip"
+  local_existing_package = data.archive_file.archive.output_path
 
-  tracing_mode          = "Active"
+  tracing_mode = "Active"
 
   depends_on = [
-    data.archive_file.archive,
     local_file.function_configuration,
   ]
 }

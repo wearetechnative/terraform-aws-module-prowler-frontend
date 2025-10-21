@@ -17,3 +17,8 @@ variable "api_base" {
   description = "API Gateway base URL"
   type        = string
 }
+
+variable "domain" {
+  description = "The primary domain name to use for the website"
+  type        = string
+}

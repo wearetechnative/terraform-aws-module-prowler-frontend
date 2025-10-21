@@ -63,15 +63,6 @@ resource "aws_security_group_rule" "alb_to_dashboard" {
   source_security_group_id = aws_security_group.alb_sg.id
 }
 
-resource "aws_security_group_rule" "allow_cloudfront_to_alb" {
-  type              = "ingress"
-  from_port         = 443
-  to_port           = 443
-  protocol          = "tcp"
-  security_group_id = aws_security_group.alb_sg.id
-  cidr_blocks = ["0.0.0.0/0"]
-}
-
 resource "aws_lb_listener_rule" "allow_cloudfront_header" {
   listener_arn = aws_lb_listener.dashboard_http.arn
   priority     = 1
