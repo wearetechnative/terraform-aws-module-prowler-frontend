@@ -28,12 +28,12 @@ resource "aws_route53_record" "cognito-domain" {
   }
 }
 
-data "aws_route53_zone" "this" {
+data "aws_route53_zone" "dashboard" {
   name = var.domain
 }
 
 resource "aws_route53_record" "dashboard" {
-  zone_id = data.aws_route53_zone.this.zone_id
+  zone_id = data.aws_route53_zone.dsahboard.zone_id
   name    = "dashboard.prowler.${var.domain}"
   type    = "A"
 
