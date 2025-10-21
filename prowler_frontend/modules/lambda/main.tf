@@ -45,11 +45,12 @@ module "lambda_function" {
   lambda_at_edge = true
 
   create_package         = false
-  local_existing_package = data.archive_file.archive.output_path
+  local_existing_package = abspath(data.archive_file.archive.output_path)
 
   tracing_mode = "Active"
 
   depends_on = [
     local_file.function_configuration,
+    data.archive_file.archive
   ]
 }
