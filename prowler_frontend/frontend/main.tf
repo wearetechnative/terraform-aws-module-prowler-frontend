@@ -9,6 +9,7 @@ locals {
     client_id        = var.client_id
     user_pool_domain = var.user_pool_domain
     api_base         = var.api_base
+    domain           = var.domain
   })
 }
 

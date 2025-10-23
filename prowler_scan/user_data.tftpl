@@ -1,0 +1,5 @@
+#!/bin/bash -xe
+
+aws s3 cp s3://${bucket_name}/output/csv /output --recursive
+aws s3 cp s3://${bucket_name}/output/compliance /output/compliance --recursive
+HOST=0.0.0.0 prowler dashboard || HOST=0.0.0.0 PORT=80 /root/.local/bin/prowler dashboard

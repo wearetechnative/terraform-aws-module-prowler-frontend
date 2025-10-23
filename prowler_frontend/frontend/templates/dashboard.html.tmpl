@@ -1,0 +1,167 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Prowler Dashboard Launcher</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <style>
+    body { margin: 0; font-family: "Inter", Arial, sans-serif; background: linear-gradient(135deg, #e8ecf7, #f8faff); color: #333; display: flex; height: 100vh; overflow: hidden; }
+    .sidebar { width: 220px; background-color: #2c3e50; color: white; display: flex; flex-direction: column; padding-top: 30px; box-shadow: 2px 0 8px rgba(0, 0, 0, 0.1); }
+    .sidebar h2 { text-align: center; font-size: 1.3em; margin-bottom: 30px; font-weight: 500; color: #ecf0f1; }
+    .sidebar a { padding: 15px 25px; color: white; text-decoration: none; font-weight: 400; transition: background-color 0.3s ease; }
+    .sidebar a:hover, .sidebar a.active { background-color: #395797; }
+    .main-content { flex-grow: 1; display: flex; align-items: center; justify-content: center; }
+    .card { background: white; border-radius: 16px; box-shadow: 0 8px 20px rgba(0, 0, 0, 0.08); padding: 40px 50px; text-align: center; max-width: 400px; width: 90%; transition: transform 0.3s ease; }
+    .card:hover { transform: translateY(-2px); }
+    h1 { font-size: 1.8em; color: #2c3e50; margin-bottom: 20px; font-weight: 500; }
+    .button { padding: 14px 26px; background-color: #395797; color: white; font-size: 1em; font-weight: 500; border: none; border-radius: 50px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); cursor: pointer; transition: all 0.3s ease; }
+    .button:hover { background-color: #0c267b; transform: scale(1.03); }
+    .button:disabled { background-color: #ccc; cursor: not-allowed; transform: none; box-shadow: none; }
+    .status { margin-top: 30px; min-height: 60px; }
+    .spinner { border: 4px solid #f3f3f3; border-top: 4px solid #395797; border-radius: 50%; width: 24px; height: 24px; animation: spin 1s linear infinite; margin: 10px auto; }
+    @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+    @media (max-width: 700px) { body { flex-direction: column; } .sidebar { width: 100%; flex-direction: row; justify-content: space-around; box-shadow: none; } .sidebar a { padding: 15px; text-align: center; flex-grow: 1; } }
+  </style>
+</head>
+<body>
+
+<div class="sidebar">
+  <h2>Prowler</h2>
+  <a href="index.html">Scan Page</a>
+  <a href="dashboard.html" class="active">Dashboard</a>
+</div>
+
+<div class="main-content">
+  <div class="card">
+    <h1>Prowler Dashboard Launcher</h1>
+    <p>Launch your Prowler dashboard instance for viewing scan results.</p>
+
+    <button id="launch-dashboard-button" onclick="handleLaunch()" class="button">Launch Dashboard</button>
+
+    <div id="waiting-screen" class="status" style="display:none;">
+      <div class="spinner"></div>
+      <p id="status-text"></p>
+    </div>
+  </div>
+</div>
+
+<script>
+const client_id         = "${client_id}";
+const user_pool_domain  = "${user_pool_domain}";
+const api_base          = "${api_base}";
+const cloudfront_url    = "https://${domain}";
+
+
+function updateStatus(message, showSpinner = true) {
+  document.getElementById("waiting-screen").style.display = "block";
+  document.getElementById("status-text").innerText = message;
+  document.querySelector(".spinner").style.display = showSpinner ? "inline-block" : "none";
+}
+
+// Cognito authentication check
+(function ensureAuthenticated() {
+  const hash = window.location.hash;
+  if (hash.includes("id_token")) {
+    const params = new URLSearchParams(hash.substring(1));
+    const idToken = params.get("id_token");
+    if (idToken) sessionStorage.setItem("idToken", idToken);
+    history.replaceState(null, "", window.location.pathname);
+  }
+  const token = sessionStorage.getItem("idToken");
+  if (!token) window.location.href = cloudfront_url;
+})();
+
+function handleLaunch() {
+  document.getElementById("launch-dashboard-button").disabled = true;
+  updateStatus("Checking dashboard...");
+
+  fetch(`$${api_base}/check-dashboard-status`, {
+    headers: { "Content-Type": "application/json", "Authorization": "Bearer " + sessionStorage.getItem("idToken") }
+  })
+  .then(res => res.json())
+  .then(data => {
+    if (data.status === "ready" && data.dashboardUrl) {
+      updateStatus("Dashboard is ready. Redirecting...");
+      redirectToDashboard(data.dashboardUrl);
+    } else if (["not_found", "terminated", "stopped"].includes(data.status)) {
+      updateStatus("Dashboard is not running. Starting it...");
+      launchDashboard();
+    } else {
+      updateStatus("Dashboard is still starting. Monitoring...");
+      sessionStorage.setItem("dashboardInstanceId", data.instanceId);
+      pollDashboardStatus();
+    }
+  })
+  .catch(err => {
+    console.error("Status check failed:", err);
+    updateStatus("Error checking dashboard. Trying to start it...");
+    launchDashboard();
+  });
+}
+
+function launchDashboard() {
+  fetch(`$${api_base}/launch-dashboard`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json", "Authorization": "Bearer " + sessionStorage.getItem("idToken") }
+  })
+  .then(res => res.json())
+  .then(data => {
+    if (!data.instanceId) throw new Error("No instance returned");
+    sessionStorage.setItem("dashboardInstanceId", data.instanceId);
+    pollDashboardStatus();
+  })
+  .catch(err => {
+    console.error("Launch failed:", err);
+    updateStatus("Failed to start dashboard.", false);
+    document.getElementById("launch-dashboard-button").disabled = false;
+  });
+}
+
+function redirectToDashboard(url) {
+  window.location.href = cloudfront_url;
+}
+
+function pollDashboardStatus(attempts = 0) {
+  const instanceId = sessionStorage.getItem("dashboardInstanceId");
+  if (!instanceId || attempts >= 60) {
+    updateStatus("Timeout waiting for dashboard.", false);
+    sessionStorage.removeItem("dashboardInstanceId");
+    document.getElementById("launch-dashboard-button").disabled = false;
+    return;
+  }
+  fetch(`$${api_base}/check-dashboard-status?instanceId=$${encodeURIComponent(instanceId)}`, {
+    headers: { "Authorization": "Bearer " + sessionStorage.getItem("idToken") }
+  })
+  .then(res => res.json())
+  .then(data => {
+    const currentStatus = data.status || "unknown";
+    updateStatus(`Waiting for dashboard... ($${currentStatus})`);
+    if (currentStatus === "ready") {
+      updateStatus("Dashboard is ready. Redirecting...");
+      setTimeout(redirectToDashboard, 1000);
+    } else if (["terminated", "not_found", "stopped"].includes(currentStatus)) {
+      updateStatus("Dashboard is no longer available. Please launch again.", false);
+      sessionStorage.removeItem("dashboardInstanceId");
+      document.getElementById("launch-dashboard-button").disabled = false;
+    } else {
+      setTimeout(() => pollDashboardStatus(attempts + 1), 3000);
+    }
+  })
+  .catch(err => {
+    console.error("Polling error:", err);
+    setTimeout(() => pollDashboardStatus(attempts + 1), 3000);
+  });
+}
+
+(function resumeIfDashboardLaunching() {
+  const instanceId = sessionStorage.getItem("dashboardInstanceId");
+  if (instanceId) {
+    document.getElementById("launch-dashboard-button").disabled = true;
+    updateStatus("Resuming dashboard launch...");
+    pollDashboardStatus();
+  }
+})();
+</script>
+
+</body>
+</html>

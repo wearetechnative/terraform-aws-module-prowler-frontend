@@ -1,15 +1,3 @@
-variable "prowlersite_name" {
-  type        = string
-  description = "Name for the frontend module"
-  default = "prowler"
-}
-
-variable "prowlersite_domain" {
-  type        = string
-  description = "Domain for the frontend module"
-  # default = "jeroen.technative.cloud"
-}
-
 variable "region" {
   description = "Region to deploy the resources."
   type        = string
@@ -88,10 +76,15 @@ variable "dlq_arn" {
   description = "ARN for DLQ for lambda"
 }
 
-# variable "domain" {
-#   type        = string
-#   description = "Domain for dashboard dns record"
-# }
+variable "cognito_id_provider_arns" {
+  description = "List of arns of cognito identity providers you want to allow to run prowler scans"
+  type        = list(any)
+}
+
+variable "domain" {
+  type        = string
+  description = "Domain for dashboard dns record"
+}
 
 variable "prowler_ami" {
   type        = string
@@ -108,4 +101,17 @@ variable "mutelist" {
   description = "Contents of the mutelist yaml file"
   type        = string
   default     = "Mutelist: []"
+}
+
+variable "dashboard_frontend_url" {
+  description = "Frontend page to launch dashboard from"
+  type = string
+}
+
+variable "cognito_domain" {
+  type = string
+}
+
+variable "dashboard_client_id" {
+  type = string
 }
