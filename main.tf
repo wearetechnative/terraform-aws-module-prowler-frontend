@@ -16,17 +16,11 @@ module "prowler_launch_website" {
     "https://dashboard.prowler.${var.prowlersite_domain}"
   ]
   api_gateway_stage_invoke_url = module.prowler_scan.api_gateway_stage_invoke_url
-  cloudfront_secret            = local.cloudfront_secret
   alb_dns                      = module.prowler_scan.alb_dns
   providers = {
     aws.us-east-1 : aws.us-east-1
   }
   depends_on = [aws_route53_zone.prowlersite]
-}
-
-resource "random_password" "cloudfront_secret" {
-  length  = 32
-  special = false
 }
 
 module "prowler_scan" {
@@ -49,7 +43,8 @@ module "prowler_scan" {
   kms_key_arn                  = var.kms_key_arn
   dlq_arn                      = var.dlq_arn
   cognito_id_provider_arns     = [module.prowler_launch_website.cognito_id_provider_arn]
+  cognito_domain               = module.prowler_launch_website.cognito_domain
+  dashboard_client_id          = module.prowler_launch_website.dashboard_client_id
   mutelist                     = var.mutelist
-  cloudfront_secret            = local.cloudfront_secret 
   depends_on = [aws_route53_zone.prowlersite]
 }

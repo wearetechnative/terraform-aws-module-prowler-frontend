@@ -1,7 +1,6 @@
 module "lambda_terminate_dashboard" {
   source = "git@github.com:wearetechnative/terraform-aws-lambda.git?ref=13eda5f9e8ae40e51f66a45837cd41a6b35af988"
 
-
   name              = "stop_dashboard_lamdba"
   role_arn          = module.iam_role_lambda_terminate_dashboard.role_arn
   role_arn_provided = true
@@ -45,7 +44,10 @@ data "aws_iam_policy_document" "terminate_dashboard" {
     actions = [
       "ec2:RunInstances",
       "ec2:DescribeInstances",
-      "ec2:TerminateInstances"
+      "ec2:TerminateInstances",
+      "elasticloadbalancing:DeregisterTargets",
+      "elasticloadbalancing:DescribeTargetHealth",
+      "elasticloadbalancing:DescribeTargetGroups"
     ]
     resources = ["*"]
   }

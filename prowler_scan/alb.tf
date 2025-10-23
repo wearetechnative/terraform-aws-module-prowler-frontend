@@ -24,13 +24,29 @@ resource "aws_lb" "dashboard" {
   subnets            = data.aws_subnets.public.ids
 }
 
+data "aws_route53_zone" "prowler" {
+  name = var.domain
+}
+
+resource "aws_route53_record" "dashboard" {
+  zone_id = data.aws_route53_zone.prowler.zone_id
+  name    = "dashboard.prowler.${var.domain}"
+  type    = "A"
+
+  alias {
+    name                   = aws_lb.dashboard.dns_name
+    zone_id                = aws_lb.dashboard.zone_id
+    evaluate_target_health = true
+  }
+}
+
 resource "aws_security_group" "alb_sg" {
   name   = "dashboard-alb-sg"
   vpc_id = var.vpc_id
 
   ingress {
-    from_port   = 80
-    to_port     = 80
+    from_port   = 443
+    to_port     = 443
     protocol    = "tcp"
     cidr_blocks = ["0.0.0.0/0"]
   }
@@ -43,24 +59,37 @@ resource "aws_security_group" "alb_sg" {
   }
 }
 
-resource "aws_security_group_rule" "inbound_443" {
-  description       = "Allow 443 traffic."
-  type              = "ingress"
-  from_port         = 443
-  to_port           = 443
-  protocol          = "tcp"
-  security_group_id = aws_security_group.alb_sg.id
-  cidr_blocks       = ["0.0.0.0/0"]
+module "acm" {
+  source  = "terraform-aws-modules/acm/aws"
+  version = "5.0.0"
+
+  domain_name               = var.domain
+  subject_alternative_names = ["*.prowler.${var.domain}"]
+  zone_id                   = data.aws_route53_zone.prowler.id
+  validation_method         = "DNS"
 }
 
-resource "aws_lb_listener" "dashboard_http" {
+resource "aws_lb_listener" "https" {
   load_balancer_arn = aws_lb.dashboard.arn
-  port              = 80
-  protocol          = "HTTP"
+  port              = 443
+  protocol          = "HTTPS"
+  ssl_policy        = "ELBSecurityPolicy-2016-08"
+  certificate_arn   = module.acm.acm_certificate_arn
+  default_action {
+    type = "authenticate-cognito"
+
+    authenticate_cognito {
+      user_pool_arn       = var.cognito_id_provider_arns[0]
+      user_pool_client_id = var.dashboard_client_id
+      user_pool_domain    = var.cognito_domain
+    }
+    order = 1
+  }
 
   default_action {
     type             = "forward"
     target_group_arn = aws_lb_target_group.dashboard.arn
+    order            = 2
   }
 }
 
@@ -71,41 +100,4 @@ resource "aws_security_group_rule" "alb_to_dashboard" {
   protocol                 = "tcp"
   security_group_id        = aws_security_group.dashboard_sg.id
   source_security_group_id = aws_security_group.alb_sg.id
-}
-
-resource "aws_lb_listener_rule" "allow_cloudfront_header" {
-  listener_arn = aws_lb_listener.dashboard_http.arn
-  priority     = 1
-
-  action {
-    type             = "forward"
-    target_group_arn = aws_lb_target_group.dashboard.arn
-  }
-
-  condition {
-    http_header {
-      http_header_name = "X-CloudFront-Secret"
-      values           = [var.cloudfront_secret]
-    }
-  }
-}
-
-# Default action blocks everything else
-resource "aws_lb_listener_rule" "deny_all" {
-  listener_arn = aws_lb_listener.dashboard_http.arn
-  priority     = 99
-
-  action {
-    type = "fixed-response"
-    fixed_response {
-      status_code  = "403"
-      content_type = "text/plain"
-      message_body = "Forbidden"
-    }
-  }
-  condition {
-    path_pattern {
-      values = ["*"]
-    }
-  }
 }

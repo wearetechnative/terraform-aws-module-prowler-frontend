@@ -51,12 +51,6 @@ variable "cognito_domain_prefix" {
   default     = "login"
 }
 
-#variable "deploy_user_create" {
-#  description = "When true a deploy user will be created."
-#  default     = false
-#  type        = bool
-#}
-
 variable "cognito_client_supported_identity_providers" {
   description = "List of identity providers"
   type        = list(string)
@@ -99,11 +93,6 @@ variable "cognito_additional_callbacks" {
 variable "api_gateway_stage_invoke_url" {
   description = "Invoke Url of the deployed api gateway stage"
   type = string
-}
-
-variable "cloudfront_secret" {
-  type        = string
-  description = "Shared secret between CloudFront and ALB"
 }
 
 variable "alb_dns" {

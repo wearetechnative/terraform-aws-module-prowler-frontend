@@ -27,7 +27,43 @@ module "cognito-user-pool" {
       callback_urls                        = local.callback_urls
       logout_urls                          = local.logout_urls
     },
+    {
+      name                         = "${var.name}-alb-client"
+      supported_identity_providers = var.cognito_client_supported_identity_providers
+
+      generate_secret                      = true
+      allowed_oauth_flows_user_pool_client = true
+      allowed_oauth_flows                  = ["code"]
+      allowed_oauth_scopes                 = ["openid"]
+
+      callback_urls = [
+        "https://dashboard.prowler.${var.route53_zone_name}/oauth2/idpresponse"
+      ]
+      logout_urls = [
+        "https://dashboard.prowler.${var.route53_zone_name}"
+      ]
+    }
   ]
 
   string_schemas = var.string_schemas
+}
+
+locals {
+  clients = [
+    {
+      name = "${var.name}-client"
+      generate_secret = true
+    },
+    {
+      name = "${var.name}-alb-client"
+      generate_secret = false
+    }
+  ]
+}
+
+locals {
+  client_map = zipmap(
+    [for c in local.clients : c.name],
+    module.cognito-user-pool.client_ids
+  )
 }

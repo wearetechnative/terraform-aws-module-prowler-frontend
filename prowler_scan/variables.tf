@@ -108,7 +108,10 @@ variable "dashboard_frontend_url" {
   type = string
 }
 
-variable "cloudfront_secret" {
-  type        = string
-  description = "Shared secret between CloudFront and ALB"
+variable "cognito_domain" {
+  type = string
+}
+
+variable "dashboard_client_id" {
+  type = string
 }

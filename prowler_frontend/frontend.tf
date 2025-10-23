@@ -4,6 +4,5 @@ module "prowler_frontend" {
     client_id = module.cognito-user-pool.client_ids[0]
     user_pool_domain = "login.${var.domain}"
     api_base = var.api_gateway_stage_invoke_url
-    domain = var.domain
-
+    domain = "dashboard.${var.domain}"
 }

@@ -1,5 +1,3 @@
-#data "aws_canonical_user_id" "current" {}
-
 module "acm" {
   source  = "terraform-aws-modules/acm/aws"
   version = "5.0.0"
@@ -38,19 +36,13 @@ module "cloudfront" {
     }
 
     dashboard = {
-      domain_name = "dashboard.${var.domain}"
+      domain_name = var.alb_dns
       custom_origin_config = {
         http_port              = 80
         https_port             = 443
-        origin_protocol_policy = "http-only" # or https-only if ALB has cert
+        origin_protocol_policy = "http-only"
         origin_ssl_protocols   = ["TLSv1.2"]
       }
-      origin_custom_header = [
-        {
-          name  = "X-CloudFront-Secret"
-          value = var.cloudfront_secret
-        }
-      ]
     }
     
     dummy = {
@@ -159,4 +151,3 @@ module "cloudfront" {
   }
 
 }
-

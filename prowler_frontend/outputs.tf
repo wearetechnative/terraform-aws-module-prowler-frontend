@@ -32,6 +32,14 @@ output "cognito_id_provider_arn" {
   
 }
 
+output "dashboard_client_id" {
+  value = local.client_map["${var.name}-alb-client"]
+}
+
+output "cognito_domain" {
+  value = "${var.cognito_domain_prefix}.${aws_route53_record.website-domain.name}"
+}
+
 output "user_arn" {
   description = "the arn of the user that was created"
   value = aws_iam_user.user.arn
