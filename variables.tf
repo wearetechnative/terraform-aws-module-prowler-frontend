@@ -30,17 +30,6 @@ variable "container_name" {
   type        = string
 }
 
-variable "prowler_container_subnet" {
-  type        = string
-  description = "Provide a Subnet ID to launch Prowler container"
-}
-
-variable "prowler_dashboard_subnet" {
-  type        = string
-  description = "Provide a Subnet ID to launch Prowler dashboard"
-  default     = ""
-}
-
 variable "vpc_id" {
   type        = string
   description = "Provide a VPC ID where prowler_container_subnet resides"

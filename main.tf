@@ -29,8 +29,8 @@ module "prowler_scan" {
   domain                       = var.prowlersite_domain
   prowler_scans                = var.prowler_scans
   ecs_cluster_name             = var.ecs_cluster_name
-  prowler_container_subnet     = var.prowler_container_subnet
-  prowler_dashboard_subnet     = var.prowler_dashboard_subnet
+  prowler_container_subnet     = local.public_subnet_ids[0]
+  prowler_dashboard_subnet     = local.public_subnet_ids[0]
   vpc_id                       = var.vpc_id
   prowler_rolename_in_accounts = var.prowler_rolename_in_accounts
   prowler_report_bucket_name   = var.prowler_report_bucket_name
