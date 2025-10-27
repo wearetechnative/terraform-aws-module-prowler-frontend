@@ -7,7 +7,6 @@ variable "prowlersite_name" {
 variable "prowlersite_domain" {
   type        = string
   description = "Domain for the frontend module"
-  # default = "jeroen.technative.cloud"
 }
 
 variable "region" {
@@ -76,11 +75,6 @@ variable "dlq_arn" {
   type        = string
   description = "ARN for DLQ for lambda"
 }
-
-# variable "domain" {
-#   type        = string
-#   description = "Domain for dashboard dns record"
-# }
 
 variable "prowler_ami" {
   type        = string

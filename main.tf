@@ -8,7 +8,7 @@ module "prowler_launch_website" {
   cognito_path_refresh_auth      = "/refreshauth"
   cognito_path_logout            = "/logout"
   cognito_path_parse_auth        = "/parseauth"
-  cognito_refresh_token_validity = 3650
+  cognito_refresh_token_validity = 3600
   cognito_domain_prefix          = "login"
   cognito_additional_callbacks   = [
     "https://login.prowler.${var.prowlersite_domain}",
@@ -47,4 +47,28 @@ module "prowler_scan" {
   dashboard_client_id          = module.prowler_launch_website.dashboard_client_id
   mutelist                     = var.mutelist
   depends_on = [aws_route53_zone.prowlersite]
+}
+
+data "aws_vpc" "selected" {
+  id = var.vpc_id
+}
+
+data "aws_subnets" "all" {
+  filter {
+    name   = "vpc-id"
+    values = [var.vpc_id]
+  }
+}
+
+data "aws_subnet" "selected" {
+  for_each = toset(data.aws_subnets.all.ids)
+  id       = each.value
+}
+
+# filter only public subnets
+locals {
+  public_subnet_ids = [
+    for subnet_id, subnet in data.aws_subnet.selected : subnet_id
+    if subnet.map_public_ip_on_launch == true
+  ]
 }
