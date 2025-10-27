@@ -6,7 +6,7 @@ variable "prowlersite_name" {
 
 variable "prowlersite_domain" {
   type        = string
-  description = "Domain for the frontend module"
+  description = "Domain where to create the records for the dashboard and frontend website"
 }
 
 variable "region" {
