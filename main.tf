@@ -10,7 +10,7 @@ module "prowler_launch_website" {
   cognito_path_parse_auth        = "/parseauth"
   cognito_refresh_token_validity = 3600
   cognito_domain_prefix          = "login"
-  cognito_additional_callbacks   = [
+  cognito_additional_callbacks = [
     "https://login.prowler.${var.prowlersite_domain}",
     "https://prowler.${var.prowlersite_domain}",
     "https://dashboard.prowler.${var.prowlersite_domain}"
@@ -46,5 +46,5 @@ module "prowler_scan" {
   cognito_domain               = module.prowler_launch_website.cognito_domain
   dashboard_client_id          = module.prowler_launch_website.dashboard_client_id
   mutelist                     = var.mutelist
-  depends_on = [aws_route53_zone.prowlersite]
+  depends_on                   = [aws_route53_zone.prowlersite]
 }

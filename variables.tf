@@ -1,7 +1,7 @@
 variable "prowlersite_name" {
   type        = string
   description = "Name for the frontend module"
-  default = "prowler"
+  default     = "prowler"
 }
 
 variable "prowlersite_domain" {
