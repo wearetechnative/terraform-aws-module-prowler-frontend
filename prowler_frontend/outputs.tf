@@ -29,7 +29,6 @@ output "cognito_user_pool_id" {
 
 output "cognito_id_provider_arn" {
   value = module.cognito-user-pool.arn
-
 }
 
 output "dashboard_client_id" {

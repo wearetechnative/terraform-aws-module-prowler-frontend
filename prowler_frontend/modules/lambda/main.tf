@@ -17,10 +17,17 @@ resource "local_file" "function_configuration" {
 }
 
 data "archive_file" "archive" {
+<<<<<<< HEAD
   type             = "zip"
   source_dir       = local.base_path
   output_path      = local.zip_output_path
   output_file_mode = "0666"
+=======
+  type               = "zip"
+  source_dir         = local.base_path
+  output_path        = local.zip_output_path
+  output_file_mode   = "0666"
+>>>>>>> main
 
   depends_on = [
     local_file.function_configuration,

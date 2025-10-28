@@ -105,7 +105,11 @@ variable "mutelist" {
 
 variable "dashboard_frontend_url" {
   description = "Frontend page to launch dashboard from"
+<<<<<<< HEAD
   type        = string
+=======
+  type = string
+>>>>>>> main
 }
 
 variable "cognito_domain" {

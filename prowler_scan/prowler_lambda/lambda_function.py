@@ -177,6 +177,7 @@ def check_dashboard_status_handler(event):
         instance_id = instance['InstanceId']
         instance_state = instance['State']['Name']
 
+<<<<<<< HEAD
         if instance_state == "pending":
             return respond(200, {"status": "starting", "instanceId": instance_id})
 
@@ -200,6 +201,25 @@ def check_dashboard_status_handler(event):
             dashboard_status = "pending"
 
         dashboard_url = f"https://{dashboard_alb_dns}/"
+=======
+        dashboard_status = instance_state
+
+        if instance_state == 'running':
+            statuses = ec2_client.describe_instance_status(
+                InstanceIds=[instance_id],
+                IncludeAllInstances=True
+            )['InstanceStatuses']
+
+            if statuses:
+                instance_status = statuses[0]['InstanceStatus']['Status']
+                system_status = statuses[0]['SystemStatus']['Status']
+                if instance_status == 'ok' and system_status == 'ok':
+                    dashboard_status = 'ready'
+            else:
+                dashboard_status = 'pending'
+
+        dashboard_url = f"http://{dashboard_alb_dns}/"
+>>>>>>> main
 
         return respond(200, {
             "status": dashboard_status,
@@ -209,4 +229,8 @@ def check_dashboard_status_handler(event):
 
     except Exception as e:
         print("Error in check_dashboard_status_handler:", str(e))
+<<<<<<< HEAD
         return respond(500, {"error": f"Failed to check dashboard status: {str(e)}"})
+=======
+        return respond(500, {"error": "Failed to check dashboard status: " + str(e)})
+>>>>>>> main
