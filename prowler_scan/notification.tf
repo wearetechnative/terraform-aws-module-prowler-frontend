@@ -32,11 +32,7 @@ module "lambda_prowler_failed_task" {
   source_file_name          = null
 
   environment_variables = {
-<<<<<<< HEAD
     TOPICARN     = aws_sns_topic.check_fail.arn
-=======
-    TOPICARN = aws_sns_topic.check_fail.arn
->>>>>>> main
     FRONTEND_URL = var.dashboard_frontend_url
   }
 
