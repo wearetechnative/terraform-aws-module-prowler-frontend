@@ -65,11 +65,11 @@ variable "deploy_user_name" {
 variable "string_schemas" {
   description = "String schemas to include"
   type = list(object({
-    attribute_data_type = string
+    attribute_data_type      = string
     developer_only_attribute = bool
-    mutable = bool
-    name = string
-    required = bool
+    mutable                  = bool
+    name                     = string
+    required                 = bool
     string_attribute_constraints = object({
       min_length = number
       max_length = number
@@ -80,8 +80,8 @@ variable "string_schemas" {
 
 variable "bucket_policy_addition" {
   description = "Additional S3 policies in Terraform format. Can be derived using jsondecode(iam_policy_document.json)."
-  type = any
-  default = null
+  type        = any
+  default     = null
 }
 
 variable "cognito_additional_callbacks" {
@@ -92,7 +92,7 @@ variable "cognito_additional_callbacks" {
 
 variable "api_gateway_stage_invoke_url" {
   description = "Invoke Url of the deployed api gateway stage"
-  type = string
+  type        = string
 }
 
 variable "alb_dns" {

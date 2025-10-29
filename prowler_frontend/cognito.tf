@@ -22,7 +22,7 @@ module "cognito-user-pool" {
 
       generate_secret                      = true
       allowed_oauth_flows_user_pool_client = true
-      allowed_oauth_flows                  = ["code","implicit"]
+      allowed_oauth_flows                  = ["code", "implicit"]
       allowed_oauth_scopes                 = ["openid"]
       callback_urls                        = local.callback_urls
       logout_urls                          = local.logout_urls
@@ -51,11 +51,11 @@ module "cognito-user-pool" {
 locals {
   clients = [
     {
-      name = "${var.name}-client"
+      name            = "${var.name}-client"
       generate_secret = true
     },
     {
-      name = "${var.name}-alb-client"
+      name            = "${var.name}-alb-client"
       generate_secret = false
     }
   ]

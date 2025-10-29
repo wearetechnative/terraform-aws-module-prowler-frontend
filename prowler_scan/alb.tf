@@ -10,9 +10,9 @@ resource "aws_lb_target_group" "dashboard" {
     port                = "11666"
     protocol            = "HTTP"
     interval            = 30
-    timeout             = 5
+    timeout             = 10
     healthy_threshold   = 2
-    unhealthy_threshold = 2
+    unhealthy_threshold = 4
   }
 }
 

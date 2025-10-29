@@ -1,13 +1,12 @@
 variable "prowlersite_name" {
   type        = string
   description = "Name for the frontend module"
-  default = "prowler"
+  default     = "prowler"
 }
 
 variable "prowlersite_domain" {
   type        = string
-  description = "Domain for the frontend module"
-  # default = "jeroen.technative.cloud"
+  description = "Domain where to create the records for the dashboard and frontend website"
 }
 
 variable "region" {
@@ -28,17 +27,6 @@ variable "ecs_cluster_name" {
 variable "container_name" {
   description = "Name of the Container within AWS Fargate"
   type        = string
-}
-
-variable "prowler_container_subnet" {
-  type        = string
-  description = "Provide a Subnet ID to launch Prowler container"
-}
-
-variable "prowler_dashboard_subnet" {
-  type        = string
-  description = "Provide a Subnet ID to launch Prowler dashboard"
-  default     = ""
 }
 
 variable "vpc_id" {
@@ -87,11 +75,6 @@ variable "dlq_arn" {
   type        = string
   description = "ARN for DLQ for lambda"
 }
-
-# variable "domain" {
-#   type        = string
-#   description = "Domain for dashboard dns record"
-# }
 
 variable "prowler_ami" {
   type        = string
