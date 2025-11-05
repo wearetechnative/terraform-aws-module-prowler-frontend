@@ -8,9 +8,9 @@ module "prowler_launch_website" {
   cognito_path_refresh_auth      = "/refreshauth"
   cognito_path_logout            = "/logout"
   cognito_path_parse_auth        = "/parseauth"
-  cognito_refresh_token_validity = 3650
+  cognito_refresh_token_validity = 3600
   cognito_domain_prefix          = "login"
-  cognito_additional_callbacks   = [
+  cognito_additional_callbacks = [
     "https://login.prowler.${var.prowlersite_domain}",
     "https://prowler.${var.prowlersite_domain}",
     "https://dashboard.prowler.${var.prowlersite_domain}"
@@ -29,8 +29,8 @@ module "prowler_scan" {
   domain                       = var.prowlersite_domain
   prowler_scans                = var.prowler_scans
   ecs_cluster_name             = var.ecs_cluster_name
-  prowler_container_subnet     = var.prowler_container_subnet
-  prowler_dashboard_subnet     = var.prowler_dashboard_subnet
+  prowler_container_subnet     = local.public_subnet_ids[0]
+  prowler_dashboard_subnet     = local.public_subnet_ids[0]
   vpc_id                       = var.vpc_id
   prowler_rolename_in_accounts = var.prowler_rolename_in_accounts
   prowler_report_bucket_name   = var.prowler_report_bucket_name
@@ -46,5 +46,5 @@ module "prowler_scan" {
   cognito_domain               = module.prowler_launch_website.cognito_domain
   dashboard_client_id          = module.prowler_launch_website.dashboard_client_id
   mutelist                     = var.mutelist
-  depends_on = [aws_route53_zone.prowlersite]
+  depends_on                   = [aws_route53_zone.prowlersite]
 }

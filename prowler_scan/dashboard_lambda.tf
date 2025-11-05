@@ -23,7 +23,6 @@ module "lambda_terminate_dashboard" {
 }
 
 module "iam_role_lambda_terminate_dashboard" {
-  
   source = "git@github.com:wearetechnative/terraform-aws-iam-role.git?ref=9229bbd0280807cbc49f194ff6d2741265dc108a"
 
   role_name = "dashboard_lambda_role"
