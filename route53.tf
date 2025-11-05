@@ -1,5 +1,5 @@
 resource "aws_route53_delegation_set" "main" {
-  reference_name = "prowler_nameserver_group"
+  reference_name = var.prowlersite_domain
 }
 
 resource "aws_route53_zone" "prowlersite" {
