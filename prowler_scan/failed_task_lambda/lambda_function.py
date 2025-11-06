@@ -23,6 +23,12 @@ sns = boto3.client("sns")
 s3 = boto3.client("s3")
 
 
+def _normalize_key(key: str | None) -> str:
+    if not key:
+        return ""
+    return re.sub(r"[\s_]", "", key.strip().lower())
+
+
 def _normalize_prefix(prefix: str) -> str:
     if not prefix:
         return ""
@@ -102,15 +108,31 @@ def _find_latest_csv_key(bucket: str, account: str) -> str | None:
     return None
 
 
+def _resolve_delimiter(csv_text: str) -> str:
+    header_line = csv_text.splitlines()[0] if csv_text else ""
+    comma_count = header_line.count(",")
+    semicolon_count = header_line.count(";")
+    if semicolon_count > comma_count:
+        return ";"
+    return ","
+
+
 def _status_is_fail(row: dict) -> bool:
     for key, value in row.items():
         if key is None:
             continue
-        if key.strip().lower() == "status":
-            return (value or "").strip().upper() == "FAIL"
-    # Some prowler versions use STATUS uppercase
-    status = row.get("STATUS") or row.get("status")
-    return (status or "").strip().upper() == "FAIL"
+        normalized_key = _normalize_key(key)
+        if normalized_key == "status":
+            normalized_value = (value or "").upper()
+            return "FAIL" in normalized_value
+
+    # Fall back to best-effort detection using concatenated values
+    row_values = [v for v in row.values() if isinstance(v, str)]
+    concatenated = " ".join(row_values).upper()
+    if "FAIL" in concatenated:
+        return True
+
+    return False
 
 
 def _format_failed_row(row: dict) -> str:
@@ -119,17 +141,29 @@ def _format_failed_row(row: dict) -> str:
         if key is None:
             continue
         key_lower = key.strip().lower()
+        norm_key = _normalize_key(key)
+        if norm_key not in normalized or not normalized[norm_key]:
+            normalized[norm_key] = (value or "").strip()
         if key_lower not in normalized or not normalized[key_lower]:
             normalized[key_lower] = (value or "").strip()
 
-    check_id = normalized.get("checkid") or normalized.get("controlid") or "Unknown check"
-    title = normalized.get("checktitle") or normalized.get("title") or ""
+    check_id = (
+        normalized.get("checkid")
+        or normalized.get("check_id")
+        or normalized.get("controlid")
+        or "Unknown check"
+    )
+    title = normalized.get("checktitle") or normalized.get("check_title") or ""
     severity = normalized.get("severity") or normalized.get("risk") or ""
     region = normalized.get("region") or "N/A"
     resource = (
         normalized.get("resourceid")
+        or normalized.get("resourceuid")
+        or normalized.get("resource_uid")
+        or normalized.get("resourcearn")
         or normalized.get("resource_arn")
-        or normalized.get("resource")
+        or normalized.get("resourcename")
+        or normalized.get("resource_name")
         or ""
     )
     detail = (
@@ -139,6 +173,18 @@ def _format_failed_row(row: dict) -> str:
         or normalized.get("status_detail")
         or ""
     )
+    status_column = (
+        normalized.get("status")
+        or normalized.get("statusvalue")
+        or normalized.get("status_field")
+        or ""
+    )
+    status_extended = (
+        normalized.get("status_extended")
+        or normalized.get("status_extendedvalue")
+        or normalized.get("status_ext")
+        or ""
+    )
 
     headline = f"{check_id}"
     if severity:
@@ -146,13 +192,13 @@ def _format_failed_row(row: dict) -> str:
     if title:
         headline += f" {title}"
 
-    details = [headline, f"Region: {region}"]
-    if resource:
-        details.append(f"Resource: {resource}")
-    if detail:
-        details.append(detail)
+    summary = status_extended or detail or headline
+    if resource and resource not in summary:
+        summary = f"{summary} ({resource})"
 
-    return " | ".join(filter(None, details))
+    region_line = f"Region: {region}"
+
+    return f"{summary}\n  {region_line}"
 
 
 def _load_failed_checks(bucket: str, account: str) -> tuple[str | None, list[str]]:
@@ -174,7 +220,8 @@ def _load_failed_checks(bucket: str, account: str) -> tuple[str | None, list[str
     except UnicodeDecodeError:
         csv_text = body_bytes.decode("utf-8", errors="replace")
 
-    reader = csv.DictReader(io.StringIO(csv_text))
+    delimiter = _resolve_delimiter(csv_text)
+    reader = csv.DictReader(io.StringIO(csv_text), delimiter=delimiter)
     failed_checks = []
     for row in reader:
         if not row:
@@ -220,11 +267,12 @@ def lambda_handler(event, context):
                     failed_checks_text += f"\n- ... and {remaining} more checks. See report at s3://{report_bucket}/{report_key}"
 
                 message = (
-                    f"A task named {container_name} scanning account {account or 'unknown'} finished with exit code 3.\n"
+                    f"A task named {container_name} scanning account {account or 'unknown'} finished found one or more security checks that have failed and are not whitelisted.\n"
                     "The following Prowler checks failed:\n"
                     f"{failed_checks_text}\n\n"
-                    f"Full report: s3://{report_bucket}/{report_key}\n"
-                    f"Prowler dashboard: {frontend_url}"
+                    f"Please run the Prowler Dashboard  for more details."
+                    f"Prowler dashboard: {frontend_url}\n"
+                    f"Failing checks can be muted by adding them to the mutelist.yaml file."
                 )
             else:
                 additional_note = ""
@@ -236,7 +284,8 @@ def lambda_handler(event, context):
                 message = (
                     f"A task named {container_name} that was scanning account {account or 'unknown'} has finished with exit code 3.\n"
                     f"This means that the Prowler scan found one or more security checks that have failed that are not whitelisted.{additional_note}\n"
-                    f"Please run the Prowler Dashboard from the documentation website prowler dashboard page {frontend_url} to see the details."
+                    f"Please run the Prowler Dashboard for more details."
+                    f"Prowler dashboard: {frontend_url}"
                 )
 
             sns.publish(

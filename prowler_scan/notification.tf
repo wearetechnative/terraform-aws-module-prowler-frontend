@@ -7,7 +7,7 @@ resource "aws_cloudwatch_event_rule" "failed_task" {
     detail = {
       lastStatus = ["STOPPED"]
       containers = {
-        name = ["prowler-task"]
+        name = [var.container_name]
       }
     }
   })
