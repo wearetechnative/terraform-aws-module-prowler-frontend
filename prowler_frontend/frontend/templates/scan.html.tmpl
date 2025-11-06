@@ -47,37 +47,85 @@
     </div>
   </div>
 
-  <!-- JavaScript (unchanged except Bearer fix) -->
+  <!-- JavaScript -->
   <script>
     const CLIENT_ID = "${client_id}";
     const USER_POOL_DOMAIN = "${user_pool_domain}";
     const APIBase = "${api_base}";
     const REDIRECT_URI = window.location.origin + window.location.pathname;
+    const TOKEN_KEY = "idToken";
+    const TOKEN_SKEW_MS = 60 * 1000; // refresh slightly before actual expiry
 
-    window.addEventListener("pageshow", function (event) {
-      if (event.persisted || (performance.getEntriesByType("navigation")[0] &&
-        performance.getEntriesByType("navigation")[0].type === "back_forward")) {
-        window.location.reload();
-      }
-    });
-
-    (function handleRedirect() {
+    function captureTokenFromHash() {
       const hash = window.location.hash;
       if (hash.includes('id_token')) {
         const params = new URLSearchParams(hash.substring(1));
         const idToken = params.get('id_token');
-        if (idToken) sessionStorage.setItem('idToken', idToken);
+        if (idToken) sessionStorage.setItem(TOKEN_KEY, idToken);
         history.replaceState(null, '', window.location.pathname);
       }
-    })();
+    }
 
-    (function ensureAuthenticated() {
-      const token = sessionStorage.getItem('idToken');
-      if (!token) {
-        const loginUrl = `https://$${USER_POOL_DOMAIN}/login?client_id=$${CLIENT_ID}&response_type=token&scope=openid&redirect_uri=$${encodeURIComponent(REDIRECT_URI)}`;
-        window.location.href = loginUrl;
+    function redirectToLogin() {
+      const loginUrl = `https://$${USER_POOL_DOMAIN}/login?client_id=$${CLIENT_ID}&response_type=token&scope=openid&redirect_uri=$${encodeURIComponent(REDIRECT_URI)}`;
+      window.location.href = loginUrl;
+    }
+
+    function decodeJwt(token) {
+      try {
+        const payload = token.split('.')[1];
+        const normalized = payload.replace(/-/g, '+').replace(/_/g, '/');
+        const padded = normalized.padEnd(normalized.length + (4 - normalized.length % 4) % 4, '=');
+        return JSON.parse(atob(padded));
+      } catch (err) {
+        console.error('Failed to decode token payload:', err);
+        return null;
       }
-    })();
+    }
+
+    function isTokenExpired(token) {
+      const payload = decodeJwt(token);
+      if (!payload || !payload.exp) return true;
+      const expiryTime = payload.exp * 1000;
+      return (expiryTime - TOKEN_SKEW_MS) <= Date.now();
+    }
+
+    function requireValidToken() {
+      const token = sessionStorage.getItem(TOKEN_KEY);
+      if (!token || isTokenExpired(token)) {
+        sessionStorage.removeItem(TOKEN_KEY);
+        redirectToLogin();
+        return null;
+      }
+      return token;
+    }
+
+    function handleUnauthorizedResponse(response) {
+      if (response && response.status === 401) {
+        sessionStorage.removeItem(TOKEN_KEY);
+        redirectToLogin();
+        return true;
+      }
+      return false;
+    }
+
+    function ensureAuthenticated() {
+      return requireValidToken();
+    }
+
+    function handlePageShow(event) {
+      const navigationEntries = performance.getEntriesByType("navigation");
+      const usedBackButton = event.persisted ||
+        (navigationEntries[0] && navigationEntries[0].type === "back_forward");
+      if (usedBackButton) {
+        if (!ensureAuthenticated()) return;
+        resumePollingIfNeeded(true);
+      }
+    }
+
+    captureTokenFromHash();
+    ensureAuthenticated();
+    window.addEventListener("pageshow", handlePageShow);
 
     function updateStatus(message, showSpinner = true) {
       document.getElementById('waiting-screen').style.display = 'block';
@@ -87,6 +135,8 @@
 
     function startTask() {
       const button = document.getElementById('start-task-button');
+      const token = requireValidToken();
+      if (!token) return;
       button.disabled = true;
       updateStatus("Starting scan...");
 
@@ -94,11 +144,14 @@
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': 'Bearer ' + sessionStorage.getItem('idToken')
+          'Authorization': 'Bearer ' + token
         },
         body: JSON.stringify({})
       })
       .then(res => {
+        if (handleUnauthorizedResponse(res)) {
+          throw new Error("Unauthorized");
+        }
         if (res.status === 409) {
           return res.json().then(data => {
             if (data.taskArns) {
@@ -129,13 +182,13 @@
       });
     }
 
-    (function resumePollingIfNeeded() {
+    function resumePollingIfNeeded(force = false) {
       const stored = sessionStorage.getItem('taskArns');
       if (stored) {
         try {
           const taskArns = JSON.parse(stored);
           if (Array.isArray(taskArns) && taskArns.length > 0) {
-            updateStatus("Resuming scan status polling...");
+            if (force) updateStatus("Resuming scan status polling...");
             document.getElementById('start-task-button').disabled = true;
             pollTaskStatus(taskArns);
           }
@@ -144,17 +197,28 @@
           sessionStorage.removeItem('taskArns');
         }
       }
-    })();
+    }
+    resumePollingIfNeeded();
 
     function pollTaskStatus(taskArns) {
+      if (!requireValidToken()) return;
       const encodedArns = encodeURIComponent(JSON.stringify(taskArns));
       const intervalId = setInterval(() => {
+        const activeToken = requireValidToken();
+        if (!activeToken) {
+          clearInterval(intervalId);
+          return;
+        }
         fetch(`$${APIBase}/check-task-status?taskArn=$${encodedArns}`, {
           headers: {
-            'Authorization': 'Bearer ' + sessionStorage.getItem('idToken')
+            'Authorization': 'Bearer ' + activeToken
           }
         })
         .then(r => {
+          if (handleUnauthorizedResponse(r)) {
+            clearInterval(intervalId);
+            throw new Error("Unauthorized");
+          }
           if (!r.ok) throw new Error("Polling failed");
           return r.json();
         })
