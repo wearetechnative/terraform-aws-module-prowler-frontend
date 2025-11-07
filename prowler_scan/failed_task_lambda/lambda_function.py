@@ -290,7 +290,7 @@ def lambda_handler(event, context):
 
             sns.publish(
                 TopicArn=topic_arn,
-                Subject="Prowler security check has failed",
+                Subject=f"Prowler has found security issues in account {account}",
                 Message=message
             )
             break
