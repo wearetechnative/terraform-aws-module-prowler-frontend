@@ -2,7 +2,7 @@ resource "aws_launch_template" "compute" {
   name          = "prowler_dashboard"
   key_name      = module.key_pair.key_pair_name
   image_id      = var.prowler_ami
-  instance_type = "t3.small"
+  instance_type = "t3.medium"
   iam_instance_profile {
     name = aws_iam_instance_profile.ec2_profile.name
   }
