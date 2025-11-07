@@ -272,7 +272,7 @@ def lambda_handler(event, context):
                     f"{failed_checks_text}\n\n"
                     f"Please run the Prowler Dashboard for more details.\n"
                     f"Prowler dashboard: {frontend_url}\n"
-                    f"Failing checks can be muted by adding them to the mutelist.yaml file."
+                    f"Failing checks can be muted by adding them to the prowler_mutelist.yaml file."
                 )
             else:
                 additional_note = ""
