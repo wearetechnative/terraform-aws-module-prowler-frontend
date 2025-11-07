@@ -50,7 +50,62 @@ const client_id         = "${client_id}";
 const user_pool_domain  = "${user_pool_domain}";
 const api_base          = "${api_base}";
 const cloudfront_url    = "https://${domain}";
+const redirect_uri      = window.location.origin + window.location.pathname;
+const TOKEN_KEY         = "idToken";
+const TOKEN_SKEW_MS     = 60 * 1000;
 
+function captureTokenFromHash() {
+  const hash = window.location.hash;
+  if (hash.includes("id_token")) {
+    const params = new URLSearchParams(hash.substring(1));
+    const idToken = params.get("id_token");
+    if (idToken) sessionStorage.setItem(TOKEN_KEY, idToken);
+    history.replaceState(null, "", window.location.pathname);
+  }
+}
+
+function redirectToLogin() {
+  const loginUrl = `https://$${user_pool_domain}/login?client_id=$${client_id}&response_type=token&scope=openid&redirect_uri=$${encodeURIComponent(redirect_uri)}`;
+  window.location.href = loginUrl;
+}
+
+function decodeJwt(token) {
+  try {
+    const payload = token.split(".")[1];
+    const normalized = payload.replace(/-/g, "+").replace(/_/g, "/");
+    const padded = normalized.padEnd(normalized.length + (4 - normalized.length % 4) % 4, "=");
+    return JSON.parse(atob(padded));
+  } catch (err) {
+    console.error("Failed to decode token payload:", err);
+    return null;
+  }
+}
+
+function isTokenExpired(token) {
+  const payload = decodeJwt(token);
+  if (!payload || !payload.exp) return true;
+  const expiryTime = payload.exp * 1000;
+  return (expiryTime - TOKEN_SKEW_MS) <= Date.now();
+}
+
+function requireValidToken() {
+  const token = sessionStorage.getItem(TOKEN_KEY);
+  if (!token || isTokenExpired(token)) {
+    sessionStorage.removeItem(TOKEN_KEY);
+    redirectToLogin();
+    return null;
+  }
+  return token;
+}
+
+function handleUnauthorizedResponse(response) {
+  if (response && response.status === 401) {
+    sessionStorage.removeItem(TOKEN_KEY);
+    redirectToLogin();
+    return true;
+  }
+  return false;
+}
 
 function updateStatus(message, showSpinner = true) {
   document.getElementById("waiting-screen").style.display = "block";
@@ -58,27 +113,37 @@ function updateStatus(message, showSpinner = true) {
   document.querySelector(".spinner").style.display = showSpinner ? "inline-block" : "none";
 }
 
-// Cognito authentication check
-(function ensureAuthenticated() {
-  const hash = window.location.hash;
-  if (hash.includes("id_token")) {
-    const params = new URLSearchParams(hash.substring(1));
-    const idToken = params.get("id_token");
-    if (idToken) sessionStorage.setItem("idToken", idToken);
-    history.replaceState(null, "", window.location.pathname);
+function ensureAuthenticated() {
+  return requireValidToken();
+}
+
+function handlePageShow(event) {
+  const navigationEntries = performance.getEntriesByType("navigation");
+  const usedBackButton = event.persisted ||
+    (navigationEntries[0] && navigationEntries[0].type === "back_forward");
+  if (usedBackButton) {
+    if (!ensureAuthenticated()) return;
+    resumeIfDashboardLaunching(true);
   }
-  const token = sessionStorage.getItem("idToken");
-  if (!token) window.location.href = cloudfront_url;
-})();
+}
+
+captureTokenFromHash();
+ensureAuthenticated();
+window.addEventListener("pageshow", handlePageShow);
 
 function handleLaunch() {
+  const token = requireValidToken();
+  if (!token) return;
   document.getElementById("launch-dashboard-button").disabled = true;
   updateStatus("Checking dashboard...");
 
   fetch(`$${api_base}/check-dashboard-status`, {
-    headers: { "Content-Type": "application/json", "Authorization": "Bearer " + sessionStorage.getItem("idToken") }
+    headers: { "Content-Type": "application/json", "Authorization": "Bearer " + token }
   })
-  .then(res => res.json())
+  .then(res => {
+    if (handleUnauthorizedResponse(res)) throw new Error("Unauthorized");
+    return res.json();
+  })
   .then(data => {
     if (data.status === "ready" && data.dashboardUrl) {
       updateStatus("Dashboard is ready. Redirecting...");
@@ -100,11 +165,16 @@ function handleLaunch() {
 }
 
 function launchDashboard() {
+  const token = requireValidToken();
+  if (!token) return;
   fetch(`$${api_base}/launch-dashboard`, {
     method: "POST",
-    headers: { "Content-Type": "application/json", "Authorization": "Bearer " + sessionStorage.getItem("idToken") }
+    headers: { "Content-Type": "application/json", "Authorization": "Bearer " + token }
   })
-  .then(res => res.json())
+  .then(res => {
+    if (handleUnauthorizedResponse(res)) throw new Error("Unauthorized");
+    return res.json();
+  })
   .then(data => {
     if (!data.instanceId) throw new Error("No instance returned");
     sessionStorage.setItem("dashboardInstanceId", data.instanceId);
@@ -129,10 +199,15 @@ function pollDashboardStatus(attempts = 0) {
     document.getElementById("launch-dashboard-button").disabled = false;
     return;
   }
+  const token = requireValidToken();
+  if (!token) return;
   fetch(`$${api_base}/check-dashboard-status?instanceId=$${encodeURIComponent(instanceId)}`, {
-    headers: { "Authorization": "Bearer " + sessionStorage.getItem("idToken") }
+    headers: { "Authorization": "Bearer " + token }
   })
-  .then(res => res.json())
+  .then(res => {
+    if (handleUnauthorizedResponse(res)) throw new Error("Unauthorized");
+    return res.json();
+  })
   .then(data => {
     const currentStatus = data.status || "unknown";
     updateStatus(`Waiting for dashboard... ($${currentStatus})`);
@@ -153,14 +228,15 @@ function pollDashboardStatus(attempts = 0) {
   });
 }
 
-(function resumeIfDashboardLaunching() {
+function resumeIfDashboardLaunching(force = false) {
   const instanceId = sessionStorage.getItem("dashboardInstanceId");
   if (instanceId) {
     document.getElementById("launch-dashboard-button").disabled = true;
-    updateStatus("Resuming dashboard launch...");
+    if (force) updateStatus("Resuming dashboard launch...");
     pollDashboardStatus();
   }
-})();
+}
+resumeIfDashboardLaunching();
 </script>
 
 </body>

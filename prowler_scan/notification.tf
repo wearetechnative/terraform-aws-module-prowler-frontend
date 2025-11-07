@@ -7,7 +7,7 @@ resource "aws_cloudwatch_event_rule" "failed_task" {
     detail = {
       lastStatus = ["STOPPED"]
       containers = {
-        name = ["prowler-task"]
+        name = [var.container_name]
       }
     }
   })
@@ -32,8 +32,10 @@ module "lambda_prowler_failed_task" {
   source_file_name          = null
 
   environment_variables = {
-    TOPICARN = aws_sns_topic.check_fail.arn
+    TOPICARN     = aws_sns_topic.check_fail.arn
     FRONTEND_URL = var.dashboard_frontend_url
+    REPORT_BUCKET = var.prowler_report_bucket_name
+    REPORT_FILENAME_PREFIX = "prowler-output-"
   }
 
   sqs_dlq_arn = var.dlq_arn
@@ -75,6 +77,26 @@ data "aws_iam_policy_document" "publish_failed_task" {
       "sns:Publish"
     ]
     resources = ["*"]
+  }
+
+  statement {
+    sid = "ListReportBucket"
+    actions = [
+      "s3:ListBucket"
+    ]
+    resources = [
+      "arn:aws:s3:::${var.prowler_report_bucket_name}"
+    ]
+  }
+
+  statement {
+    sid = "ReadReportObjects"
+    actions = [
+      "s3:GetObject"
+    ]
+    resources = [
+      "arn:aws:s3:::${var.prowler_report_bucket_name}/*"
+    ]
   }
 }
 
