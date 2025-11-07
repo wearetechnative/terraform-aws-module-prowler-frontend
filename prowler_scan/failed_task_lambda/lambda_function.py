@@ -267,7 +267,7 @@ def lambda_handler(event, context):
                     failed_checks_text += f"\n- ... and {remaining} more checks. See report at s3://{report_bucket}/{report_key}"
 
                 message = (
-                    f"A task named {container_name} scanning account {account or 'unknown'} finished found one or more security checks that have failed and are not whitelisted.\n"
+                    f"A task named {container_name} scanning account {account or 'unknown'} has finished and found one or more security checks that have failed and are not whitelisted.\n"
                     "The following Prowler checks failed:\n"
                     f"{failed_checks_text}\n\n"
                     f"Please run the Prowler Dashboard  for more details."
