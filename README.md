@@ -18,19 +18,104 @@ See [pre-commit installation](https://pre-commit.com/#install) on how to install
 
 ## Usage
 
-The Prowler dashboard needs an ami with prowler pre installed:
-when using a Ubuntu base ami, run the following:
+### 1. Prepare a Prowler-ready AMI
+
+The EC2 dashboard instance bootstraps significantly faster when Prowler and its
+dependencies are already available on the image. When using an Ubuntu base AMI,
+install the tools shown below and register the resulting AMI in the account in
+which you run this module.
 
 ```
 sudo apt update -y
-sudo apt install pipx -y
-apt install unzip -y
+sudo apt install pipx unzip -y
 curl "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o "awscliv2.zip"
 unzip awscliv2.zip
 sudo ./aws/install
 pipx install prowler
 pipx ensurepath
 ```
+
+### 2. Deploy the module
+
+Reference this repository from your Terraform configuration and provide the
+required inputs for both the scan backend and the Cognito-protected frontend
+(VPC, Route53 zone, bucket name, scan definitions, etc.).
+
+```hcl
+module "prowler_stack" {
+  source = "git::https://github.com/wearetechnative/terraform-aws-module-prowler-frontend.git?ref=<release>"
+
+  region                     = "eu-west-1"
+  prowlersite_domain         = "example.com"
+  vpc_id                     = "vpc-0123456789abcdef0"
+  ecs_cluster_name           = "prowler"
+  container_name             = "prowler"
+  prowler_report_bucket_name = "prowler-reports-example"
+  prowler_rolename_in_accounts = "ProwlerExecutionRole"
+  prowler_ami                  = "ami-0abc123def4567890"
+  allowed_ips                = ["203.0.113.10/32"]
+  prowler_scans = {
+    nightly = {
+      prowler_schedule_timer       = "cron(0 1 * * ? *)"
+      prowler_schedule_timezone    = "UTC"
+      prowler_scan_regions         = ["eu-west-1"]
+      prowler_report_output_format = "csv"
+      task_definition_name         = "prowler-nightly"
+      fargate_task_cpu             = "1024"
+      fargate_memory               = "2048"
+      ecr_image_uri                = "123456789012.dkr.ecr.eu-west-1.amazonaws.com/prowler:latest"
+      prowler_account_list         = ["111122223333"]
+      compliance_checks            = ["cis_aws"]
+      severity                     = ["HIGH", "MEDIUM"]
+    }
+  }
+
+  # See variables.tf for the remaining inputs such as kms_key_arn, dlq_arn, etc.
+}
+```
+
+Run `terraform init`, `terraform plan`, and `terraform apply` to provision the
+scan pipeline, API Gateway, Cognito user pool, CloudFront distribution, and the
+dashboard infrastructure.
+
+### 3. Create a Cognito user for the dashboard
+
+Only authenticated Cognito users can open the dashboard or trigger scans. After
+the infrastructure is deployed, create at least one user in the Cognito user
+pool that the module created (its name is derived from `var.prowlersite_name`).
+This can be done through the AWS Console or the CLI:
+
+```
+aws cognito-idp admin-create-user \
+  --user-pool-id <cognito_user_pool_id> \
+  --username security@example.com \
+  --user-attributes Name=email,Value=security@example.com \
+  --temporary-password 'Prowler#2024'
+```
+
+Replace `<cognito_user_pool_id>` with the ID of the Cognito pool shown in the
+Amazon Cognito console (or obtained from Terraform state via
+`terraform output -raw cognito_user_pool_id`). Share the temporary
+password with the intended operator so they can update it at first login.
+
+### 4. Subscribe to the SNS topic for scan notifications
+
+The module creates an SNS topic named `prowler_security_check_fail_notifier`
+that receives events whenever a scan finishes with failing checks. Subscribe
+your operations mailbox (or another notification target) so you receive those
+alerts:
+
+```
+aws sns subscribe \
+  --topic-arn <topic_arn> \
+  --protocol email \
+  --notification-endpoint secops@example.com
+```
+
+The topic ARN is visible in the Amazon SNS console or through the Terraform
+state using `terraform output -raw sns_topic_arn`. Confirm the subscription from
+the email that AWS sends. Without this step you will not receive alerts
+about failed scans.
 
 
 <!-- BEGIN_TF_DOCS -->

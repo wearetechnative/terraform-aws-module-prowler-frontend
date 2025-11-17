@@ -9,3 +9,8 @@ output "api_gateway_stage_invoke_url" {
 output "alb_dns" {
   value = aws_lb.dashboard.dns_name
 }
+
+output "sns_topic_arn" {
+  description = "ARN of the SNS topic used for failed scan notifications"
+  value       = aws_sns_topic.check_fail.arn
+}
