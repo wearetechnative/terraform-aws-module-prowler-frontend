@@ -90,7 +90,7 @@ data "aws_iam_policy_document" "dashboard_ec2" {
 }
 
 module "ec2_instance_role" {
-  source = "git@github.com:wearetechnative/terraform-aws-iam-role?ref=0fe916c27097706237692122e09f323f55e8237e"
+  source = "git::https://github.com/wearetechnative/terraform-aws-iam-role.git?ref=377cfce5febad930cb61097cd61c5a3f3f8925fd"
 
   role_name = "ec2_instance_role"
   role_path = "/network/"
