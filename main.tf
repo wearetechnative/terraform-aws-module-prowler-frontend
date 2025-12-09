@@ -2,7 +2,7 @@ module "prowler_launch_website" {
 
   source                         = "./prowler_frontend"
   name                           = var.prowlersite_name
-  domain                         = "${var.prowlersite_name}.${var.prowlersite_domain}"
+  domain                         = var.prowlersite_domain
   route53_zone_name              = var.prowlersite_domain
   deploy_user_name               = "prowler-deployer-user"
   cognito_path_refresh_auth      = "/refreshauth"
@@ -11,9 +11,9 @@ module "prowler_launch_website" {
   cognito_refresh_token_validity = 3600
   cognito_domain_prefix          = "login"
   cognito_additional_callbacks = [
-    "https://login.prowler.${var.prowlersite_domain}",
-    "https://prowler.${var.prowlersite_domain}",
-    "https://dashboard.prowler.${var.prowlersite_domain}"
+    "https://login.${var.prowlersite_domain}",
+    "https://${var.prowlersite_domain}",
+    "https://dashboard.${var.prowlersite_domain}"
   ]
   api_gateway_stage_invoke_url = module.prowler_scan.api_gateway_stage_invoke_url
   alb_dns                      = module.prowler_scan.alb_dns

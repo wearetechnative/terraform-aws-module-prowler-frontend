@@ -37,10 +37,10 @@ module "cognito-user-pool" {
       allowed_oauth_scopes                 = ["openid"]
 
       callback_urls = [
-        "https://dashboard.prowler.${var.route53_zone_name}/oauth2/idpresponse"
+        "https://dashboard.${var.route53_zone_name}/oauth2/idpresponse"
       ]
       logout_urls = [
-        "https://dashboard.prowler.${var.route53_zone_name}"
+        "https://dashboard.${var.route53_zone_name}"
       ]
     }
   ]

@@ -30,7 +30,7 @@ data "aws_route53_zone" "prowler" {
 
 resource "aws_route53_record" "dashboard" {
   zone_id = data.aws_route53_zone.prowler.zone_id
-  name    = "dashboard.prowler.${var.domain}"
+  name    = "dashboard.${var.domain}"
   type    = "A"
 
   alias {
@@ -64,7 +64,7 @@ module "acm" {
   version = "5.0.0"
 
   domain_name               = var.domain
-  subject_alternative_names = ["*.prowler.${var.domain}"]
+  subject_alternative_names = ["*.${var.domain}"]
   zone_id                   = data.aws_route53_zone.prowler.id
   validation_method         = "DNS"
 }
