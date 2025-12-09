@@ -44,7 +44,7 @@ module "prowler_stack" {
   source = "git::https://github.com/wearetechnative/terraform-aws-module-prowler-frontend.git?ref=<release>"
 
   region                     = "eu-west-1"
-  prowlersite_domain         = "example.com"
+  prowlersite_domain         = "prowler.example.com"
   vpc_id                     = "vpc-0123456789abcdef0"
   ecs_cluster_name           = "prowler"
   container_name             = "prowler"
@@ -155,7 +155,7 @@ about failed scans.
 | <a name="input_prowler_report_bucket_name"></a> [prowler\_report\_bucket\_name](#input\_prowler\_report\_bucket\_name) | Name of the bucket where output reports are saved | `string` | n/a | yes |
 | <a name="input_prowler_rolename_in_accounts"></a> [prowler\_rolename\_in\_accounts](#input\_prowler\_rolename\_in\_accounts) | Name of the role in all the accounts that prowler assumes to scan | `string` | n/a | yes |
 | <a name="input_prowler_scans"></a> [prowler\_scans](#input\_prowler\_scans) | prowler config | <pre>map(object({<br>    prowler_schedule_timer       = string<br>    prowler_schedule_timezone    = string<br>    prowler_scan_regions         = list(string)<br>    prowler_report_output_format = string<br>    task_definition_name         = string<br>    fargate_task_cpu             = string<br>    fargate_memory               = string<br>    ecr_image_uri                = string<br>    prowler_account_list         = list(string)<br>    compliance_checks            = list(string)<br>    severity                     = list(string)<br>  }))</pre> | n/a | yes |
-| <a name="input_prowlersite_domain"></a> [prowlersite\_domain](#input\_prowlersite\_domain) | Domain where to create the records for the dashboard and frontend website | `string` | n/a | yes |
+| <a name="input_prowlersite_domain"></a> [prowlersite\_domain](#input\_prowlersite\_domain) | Fully qualified domain for the dashboard and frontend (for example, prowler.example.com) | `string` | n/a | yes |
 | <a name="input_prowlersite_name"></a> [prowlersite\_name](#input\_prowlersite\_name) | Name for the frontend module | `string` | `"prowler"` | no |
 | <a name="input_region"></a> [region](#input\_region) | Region to deploy the resources. | `string` | n/a | yes |
 | <a name="input_report_retention"></a> [report\_retention](#input\_report\_retention) | Number of days to retain prowler reports in bucket | `number` | n/a | yes |
