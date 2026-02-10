@@ -35,10 +35,17 @@ pipx install prowler
 pipx ensurepath
 ```
 
-### 2. Target account prerequisites (every account to scan)
+### 2. Target account role (create before first scan run)
 
-Each target account must have an IAM role that Prowler can assume. The role
-name must match `var.prowler_rolename_in_accounts`.
+Each target account needs an IAM role that Prowler can assume. The role name
+must match `var.prowler_rolename_in_accounts`.
+
+You can deploy this module first to create the scanner account role
+(`prowler_task_role`), then create/update trust in target accounts to that role
+before the first scheduled scan executes.
+
+Important: if `prowler_rolename_in_accounts` is `"prowler_scan_role"`, the role
+in every target account must also be named `"prowler_scan_role"`.
 
 Example for target accounts:
 
@@ -99,6 +106,15 @@ provider "aws" {
 ```
 
 ### 2. Deploy the module
+
+The value of `prowler_rolename_in_accounts` must exactly match the target
+account IAM role name shown in the previous section.
+
+Deployment order:
+
+1. Apply this module in the scanner account.
+2. Create/update the target-account role trust to `prowler_task_role` from the scanner account.
+3. Run scans (manually or on schedule).
 
 ```hcl
 module "prowler_stack" {
