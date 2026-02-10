@@ -6,24 +6,25 @@ This module implements ...
 
 [![](we-are-technative.png)](https://www.technative.nl)
 
-## How does it work
+## Prerequisites
 
-### First use after you clone this repository or when .pre-commit-config.yaml is updated
+Before deploying this module, ensure the following resources and setup exist.
 
-Run `pre-commit install` to install any guardrails implemented using pre-commit.
+### 1. Scanner account prerequisites
 
-See [pre-commit installation](https://pre-commit.com/#install) on how to install pre-commit.
+- A VPC with at least one public subnet (`map_public_ip_on_launch = true`)
+- A KMS key for Lambda encryption (`kms_key_arn`)
+- An SQS dead-letter queue for Lambda (`dlq_arn`)
+- A domain name for the frontend, for example `prowler.example.com`
+- An ECR image containing Prowler
+- A Prowler-ready AMI for the dashboard EC2 instance (`prowler_ami`)
 
-## Usage
 
-### 1. Prepare a Prowler-ready AMI
+There is a public AMI: ami-06d17b909aa1698bb, it has prowler preinstalled and is ready to use out of the box.
 
-The EC2 dashboard instance bootstraps significantly faster when Prowler and its
-dependencies are already available on the image. When using an Ubuntu base AMI,
-install the tools shown below and register the resulting AMI in the account in
-which you run this module.
+A dashboard AMI can also be prepared from Ubuntu using:
 
-```
+```bash
 sudo apt update -y
 sudo apt install pipx unzip -y
 curl "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o "awscliv2.zip"
@@ -43,15 +44,26 @@ required inputs for both the scan backend and the Cognito-protected frontend
 module "prowler_stack" {
   source = "git::https://github.com/wearetechnative/terraform-aws-module-prowler-frontend.git?ref=<release>"
 
-  region                     = "eu-west-1"
-  prowlersite_domain         = "prowler.example.com"
-  vpc_id                     = "vpc-0123456789abcdef0"
-  ecs_cluster_name           = "prowler"
-  container_name             = "prowler"
-  prowler_report_bucket_name = "prowler-reports-example"
-  prowler_rolename_in_accounts = "ProwlerExecutionRole"
-  prowler_ami                  = "ami-0abc123def4567890"
-  allowed_ips                = ["203.0.113.10/32"]
+  providers = {
+    aws           = aws
+    aws.us-east-1 = aws.us-east-1
+  }
+
+  region                       = "eu-west-1"
+  prowlersite_name             = "prowler"
+  prowlersite_domain           = "prowler.example.com"
+  vpc_id                       = "vpc-0123456789abcdef0"
+  ecs_cluster_name             = "prowler"
+  container_name               = "prowler"
+  prowler_report_bucket_name   = "prowler-reports-example"
+  prowler_rolename_in_accounts = "prowler_scan_role"
+  report_retention             = 30
+  prowler_ami                  = "ami-06d17b909aa1698bb"
+  allowed_ips                  = ["10.10.10.10/32"] # ssh access to dashboard instance
+  dashboard_uptime             = "30m"
+  kms_key_arn                  = "arn:aws:kms:eu-west-1:123456789012:key/xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
+  dlq_arn                      = "arn:aws:sqs:eu-west-1:123456789012:prowler-lambda-dlq"
+
   prowler_scans = {
     nightly = {
       prowler_schedule_timer       = "cron(0 1 * * ? *)"
