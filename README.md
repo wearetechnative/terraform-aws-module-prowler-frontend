@@ -135,7 +135,7 @@ module "prowler_stack" {
   prowler_rolename_in_accounts = "prowler_scan_role"
   report_retention             = 30
   prowler_ami                  = "ami-0abc123def4567890"
-  allowed_ips                  = ["203.0.113.10/32"]
+  allowed_ips                  = ["10.10.10.10/32"] # ssh access to dashboard instance
   dashboard_uptime             = "1h"
   kms_key_arn                  = "arn:aws:kms:eu-west-1:123456789012:key/xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
   dlq_arn                      = "arn:aws:sqs:eu-west-1:123456789012:prowler-lambda-dlq"
@@ -152,7 +152,7 @@ module "prowler_stack" {
       ecr_image_uri                = "123456789012.dkr.ecr.eu-west-1.amazonaws.com/prowler:latest"
       prowler_account_list         = ["111122223333", "444455556666"]
       compliance_checks            = ["cis_aws"]
-      severity                     = ["HIGH", "MEDIUM"]
+      severity                     = ["critical", "high"]
     }
   }
 }
