@@ -48,7 +48,7 @@ variable "scanner_account_id" {
 }
 
 resource "aws_iam_role" "prowler_execution" {
-  name = "ProwlerExecutionRole"
+  name = "prowler_scan_role"
 
   assume_role_policy = jsonencode({
     Version = "2012-10-17"
@@ -116,7 +116,7 @@ module "prowler_stack" {
   ecs_cluster_name             = "prowler"
   container_name               = "prowler"
   prowler_report_bucket_name   = "prowler-reports-example"
-  prowler_rolename_in_accounts = "ProwlerExecutionRole"
+  prowler_rolename_in_accounts = "prowler_scan_role"
   report_retention             = 30
   prowler_ami                  = "ami-0abc123def4567890"
   allowed_ips                  = ["203.0.113.10/32"]
