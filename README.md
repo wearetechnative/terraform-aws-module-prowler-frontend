@@ -1,29 +1,31 @@
-# Terraform AWS [Prowler] ![](https://img.shields.io/github/actions/workflow/status/wearetechnative/terraform-aws-iam-user/tflint.yaml?style=plastic)
+# Terraform AWS Prowler Frontend
 
-<!-- SHIELDS -->
+This module deploys a complete Prowler scanning stack on AWS:
 
-This module implements ...
+- Scheduled Prowler scans on ECS Fargate
+- API Gateway + Lambda endpoints to start scans and launch the dashboard
+- Cognito-protected frontend on CloudFront
+- ALB + EC2-backed Prowler dashboard
+- SNS notifications for failed checks
 
 [![](we-are-technative.png)](https://www.technative.nl)
 
-## How does it work
+## Prerequisites
 
-### First use after you clone this repository or when .pre-commit-config.yaml is updated
+Before deploying this module, ensure the following resources and setup exist.
 
-Run `pre-commit install` to install any guardrails implemented using pre-commit.
+### 1. Scanner account prerequisites
 
-See [pre-commit installation](https://pre-commit.com/#install) on how to install pre-commit.
+- A VPC with at least one public subnet (`map_public_ip_on_launch = true`)
+- A KMS key for Lambda encryption (`kms_key_arn`)
+- An SQS dead-letter queue for Lambda (`dlq_arn`)
+- A domain name for the frontend, for example `prowler.example.com`
+- An ECR image containing Prowler
+- A Prowler-ready AMI for the dashboard EC2 instance (`prowler_ami`)
 
-## Usage
+The dashboard AMI can be prepared from Ubuntu using:
 
-### 1. Prepare a Prowler-ready AMI
-
-The EC2 dashboard instance bootstraps significantly faster when Prowler and its
-dependencies are already available on the image. When using an Ubuntu base AMI,
-install the tools shown below and register the resulting AMI in the account in
-which you run this module.
-
-```
+```bash
 sudo apt update -y
 sudo apt install pipx unzip -y
 curl "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o "awscliv2.zip"
@@ -33,57 +35,122 @@ pipx install prowler
 pipx ensurepath
 ```
 
-### 2. Deploy the module
+### 2. Target account prerequisites (every account to scan)
 
-Reference this repository from your Terraform configuration and provide the
-required inputs for both the scan backend and the Cognito-protected frontend
-(VPC, Route53 zone, bucket name, scan definitions, etc.).
+Each target account must have an IAM role that Prowler can assume. The role
+name must match `var.prowler_rolename_in_accounts`.
+
+Example for target accounts:
+
+```hcl
+variable "scanner_account_id" {
+  type = string
+}
+
+resource "aws_iam_role" "prowler_execution" {
+  name = "ProwlerExecutionRole"
+
+  assume_role_policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Effect = "Allow"
+        Action = "sts:AssumeRole"
+        Principal = {
+          AWS = "arn:aws:iam::${var.scanner_account_id}:role/prowler_task_role"
+        }
+      }
+    ]
+  })
+}
+
+resource "aws_iam_role_policy_attachment" "security_audit" {
+  role       = aws_iam_role.prowler_execution.name
+  policy_arn = "arn:aws:iam::aws:policy/SecurityAudit"
+}
+```
+
+## Usage
+
+### 1. Configure providers
+
+This module requires an AWS provider alias for `us-east-1` because Lambda@Edge
+and ACM resources for CloudFront are created there.
+
+```hcl
+terraform {
+  required_version = ">= 1.0.2"
+  required_providers {
+    aws = {
+      source  = "hashicorp/aws"
+      version = ">= 4.9.0"
+    }
+  }
+}
+
+provider "aws" {
+  region = "eu-west-1"
+}
+
+provider "aws" {
+  alias  = "us-east-1"
+  region = "us-east-1"
+}
+```
+
+### 2. Deploy the module
 
 ```hcl
 module "prowler_stack" {
   source = "git::https://github.com/wearetechnative/terraform-aws-module-prowler-frontend.git?ref=<release>"
 
-  region                     = "eu-west-1"
-  prowlersite_domain         = "prowler.example.com"
-  vpc_id                     = "vpc-0123456789abcdef0"
-  ecs_cluster_name           = "prowler"
-  container_name             = "prowler"
-  prowler_report_bucket_name = "prowler-reports-example"
+  providers = {
+    aws           = aws
+    aws.us-east-1 = aws.us-east-1
+  }
+
+  region                       = "eu-west-1"
+  prowlersite_name             = "prowler"
+  prowlersite_domain           = "prowler.example.com"
+  vpc_id                       = "vpc-0123456789abcdef0"
+  ecs_cluster_name             = "prowler"
+  container_name               = "prowler"
+  prowler_report_bucket_name   = "prowler-reports-example"
   prowler_rolename_in_accounts = "ProwlerExecutionRole"
+  report_retention             = 30
   prowler_ami                  = "ami-0abc123def4567890"
-  allowed_ips                = ["203.0.113.10/32"]
+  allowed_ips                  = ["203.0.113.10/32"]
+  dashboard_uptime             = "1h"
+  kms_key_arn                  = "arn:aws:kms:eu-west-1:123456789012:key/xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
+  dlq_arn                      = "arn:aws:sqs:eu-west-1:123456789012:prowler-lambda-dlq"
+
   prowler_scans = {
     nightly = {
       prowler_schedule_timer       = "cron(0 1 * * ? *)"
       prowler_schedule_timezone    = "UTC"
       prowler_scan_regions         = ["eu-west-1"]
-      prowler_report_output_format = "csv"
+      prowler_report_output_format = "csv" # And/or "html", "json"
       task_definition_name         = "prowler-nightly"
       fargate_task_cpu             = "1024"
       fargate_memory               = "2048"
       ecr_image_uri                = "123456789012.dkr.ecr.eu-west-1.amazonaws.com/prowler:latest"
-      prowler_account_list         = ["111122223333"]
+      prowler_account_list         = ["111122223333", "444455556666"]
       compliance_checks            = ["cis_aws"]
       severity                     = ["HIGH", "MEDIUM"]
     }
   }
-
-  # See variables.tf for the remaining inputs such as kms_key_arn, dlq_arn, etc.
 }
 ```
 
-Run `terraform init`, `terraform plan`, and `terraform apply` to provision the
-scan pipeline, API Gateway, Cognito user pool, CloudFront distribution, and the
-dashboard infrastructure.
+### 3. Delegate DNS
 
-### 3. Create a Cognito user for the dashboard
+The module creates a hosted zone for `prowlersite_domain` and outputs its name
+servers as `prowler_frontend_hosted_zone_ns_servers`. Delegate those NS records
+in your parent DNS zone so the frontend and dashboard records resolve.
 
-Only authenticated Cognito users can open the dashboard or trigger scans. After
-the infrastructure is deployed, create at least one user in the Cognito user
-pool that the module created (its name is derived from `var.prowlersite_name`).
-This can be done through the AWS Console or the CLI:
+### 4. Create a Cognito user for the dashboard
 
-```
+```bash
 aws cognito-idp admin-create-user \
   --user-pool-id <cognito_user_pool_id> \
   --username security@example.com \
@@ -91,29 +158,32 @@ aws cognito-idp admin-create-user \
   --temporary-password 'Prowler#2024'
 ```
 
-Replace `<cognito_user_pool_id>` with the ID of the Cognito pool shown in the
-Amazon Cognito console (or obtained from Terraform state via
-`terraform output -raw cognito_user_pool_id`). Share the temporary
-password with the intended operator so they can update it at first login.
+The user pool ID is available via:
 
-### 4. Subscribe to the SNS topic for scan notifications
-
-The module creates an SNS topic named `prowler_security_check_fail_notifier`
-that receives events whenever a scan finishes with failing checks. Subscribe
-your operations mailbox (or another notification target) so you receive those
-alerts:
-
+```bash
+terraform output -raw cognito_user_pool_id
 ```
+
+### 5. Subscribe to SNS notifications
+
+```bash
 aws sns subscribe \
-  --topic-arn <topic_arn> \
+  --topic-arn "$(terraform output -raw sns_topic_arn)" \
   --protocol email \
   --notification-endpoint secops@example.com
 ```
 
-The topic ARN is visible in the Amazon SNS console or through the Terraform
-state using `terraform output -raw sns_topic_arn`. Confirm the subscription from
-the email that AWS sends. Without this step you will not receive alerts
-about failed scans.
+Confirm the subscription from the email AWS sends.
+
+## Operational Notes
+
+- The dashboard EC2 instance is temporary and auto-terminates after
+  `dashboard_uptime`.
+- Current dashboard behavior: it copies reports from S3 at startup and reads the
+  local directory once. New scan results written to S3 after startup are not
+  visible until you launch a new dashboard instance.
+- If you need continuously fresh results, use an external sync/restart strategy
+  or move the dashboard runtime to a containerized model that refreshes data.
 
 
 <!-- BEGIN_TF_DOCS -->
