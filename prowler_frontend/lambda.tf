@@ -21,7 +21,7 @@ module "lambda_function" {
   "oauthScopes": ["openid"],
   "cognitoAuthDomain": "${var.cognito_domain_prefix}.${var.domain}",
   "redirectPathSignIn": "${var.cognito_path_parse_auth}",
-  "redirectPathSignOut": "${var.cognito_path_logout}",
+  "redirectPathSignOut": "/",
   "redirectPathAuthRefresh": "${var.cognito_path_refresh_auth}",
   "cookieSettings": { "idToken": null, "accessToken": null, "refreshToken": null, "nonce": null },
   "mode": "spaMode",
