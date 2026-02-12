@@ -10,6 +10,8 @@
     .sidebar h2 { text-align: center; font-size: 1.3em; margin-bottom: 30px; font-weight: 500; color: #ecf0f1; }
     .sidebar a { padding: 15px 25px; color: white; text-decoration: none; font-weight: 400; transition: background-color 0.3s ease; }
     .sidebar a:hover, .sidebar a.active { background-color: #395797; }
+    .sidebar .logout-link { margin-top: auto; background: #b23b3b; }
+    .sidebar .logout-link:hover { background: #902c2c; }
     .main-content { flex-grow: 1; display: flex; align-items: center; justify-content: center; }
     .card { background: white; border-radius: 16px; box-shadow: 0 8px 20px rgba(0, 0, 0, 0.08); padding: 40px 50px; text-align: center; max-width: 400px; width: 90%; transition: transform 0.3s ease; }
     .card:hover { transform: translateY(-2px); }
@@ -29,6 +31,7 @@
   <h2>Prowler</h2>
   <a href="index.html">Scan</a>
   <a href="dashboard.html" class="active">Dashboard</a>
+  <a href="/logout" id="logout-link" class="logout-link">Logout</a>
 </div>
 
 <div class="main-content">
@@ -130,6 +133,11 @@ function handlePageShow(event) {
 captureTokenFromHash();
 ensureAuthenticated();
 window.addEventListener("pageshow", handlePageShow);
+document.getElementById("logout-link").addEventListener("click", function(event) {
+  event.preventDefault();
+  sessionStorage.clear();
+  window.location.href = "/logout";
+});
 
 function handleLaunch() {
   const token = requireValidToken();
