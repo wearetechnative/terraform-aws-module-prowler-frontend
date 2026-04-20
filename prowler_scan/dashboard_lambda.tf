@@ -1,7 +1,7 @@
 module "lambda_terminate_dashboard" {
   source = "git::https://github.com/wearetechnative/terraform-aws-lambda.git?ref=b9da56ded8f437adde4fe9819fb292050c7ee515"
 
-  name              = "stop_dashboard_lamdba"
+  name              = "stop_dashboard_lambda"
   role_arn          = module.iam_role_lambda_terminate_dashboard.role_arn
   role_arn_provided = true
   kms_key_arn       = var.kms_key_arn
