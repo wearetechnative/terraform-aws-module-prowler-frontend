@@ -1,4 +1,4 @@
-# Terraform AWS Prowler Frontend
+# Terraform AWS Prowler Frontend ![](https://img.shields.io/github/actions/workflow/status/wearetechnative/terraform-aws-module-prowler-frontend/tflint.yaml?branch=main&style=plastic)
 
 This module deploys a complete Prowler scanning stack on AWS:
 
