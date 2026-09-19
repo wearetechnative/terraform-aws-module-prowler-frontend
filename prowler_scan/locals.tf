@@ -13,7 +13,7 @@ locals {
       ecr_image_uri                = prowler_value.ecr_image_uri
       prowler_account_list         = prowler_value.prowler_account_list
     }
-  ]) : "${value.prowler_scan}" => value }
+  ]) : value.prowler_scan => value }
 
   rest_api_id = aws_api_gateway_rest_api.prowler.id
   parent_id   = aws_api_gateway_rest_api.prowler.root_resource_id
