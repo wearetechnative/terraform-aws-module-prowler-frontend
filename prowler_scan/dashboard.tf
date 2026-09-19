@@ -128,7 +128,7 @@ data "aws_iam_policy_document" "s3_access" {
     ]
 
     resources = [
-      "${aws_s3_bucket.prowler_bucket.arn}",
+      aws_s3_bucket.prowler_bucket.arn,
       "${aws_s3_bucket.prowler_bucket.arn}/*"
     ]
   }

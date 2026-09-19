@@ -49,7 +49,7 @@ data "aws_iam_policy_document" "s3_policy" {
   statement {
     actions = ["s3:*"]
     resources = [
-      "${module.website_bucket.s3_bucket_arn}",
+      module.website_bucket.s3_bucket_arn,
       "${module.website_bucket.s3_bucket_arn}/*"
     ]
 

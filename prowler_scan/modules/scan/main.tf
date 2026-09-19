@@ -16,29 +16,29 @@ resource "aws_ecs_task_definition" "prowler_ecs_task_definition" {
           "-R",
           "arn:aws:iam::${each.value}:role/${var.prowler_rolename_in_accounts}",
           "-M",
-          "${var.prowler_report_output_format}",
+          var.prowler_report_output_format,
           "-D",
-          "${var.prowler_bucket_id}",
+          var.prowler_bucket_id,
           "-w",
           "s3://${var.prowler_bucket_id}/mutelist/mutelist.yaml"],
         local.command_args)
 
 
         essential = true
-        image     = "${var.ecr_image_uri}"
+        image     = var.ecr_image_uri
         logConfiguration = {
           logDriver = "awslogs"
           options = {
             awslogs-create-group  = "true"
             awslogs-group         = "/ecs/${var.container_name}"
-            awslogs-region        = "${var.region}"
+            awslogs-region        = var.region
             awslogs-stream-prefix = "ecs"
             max-buffer-size       = "25m"
             mode                  = "non-blocking"
           }
           secretOptions = []
         }
-        name = "${var.container_name}"
+        name = var.container_name
       }
     ]
   )
